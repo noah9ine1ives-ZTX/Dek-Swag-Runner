@@ -1,0 +1,16 @@
+SWAG NIGHT RUNNER - DEPLOY CHECKLIST
+
+[ ] แตกไฟล์ swag-night-runner.zip
+[ ] เปิด Terminal ในโฟลเดอร์ swag-night-runner
+[ ] รัน npm install
+[ ] รัน npm run build เพื่อตรวจว่า build ผ่าน
+[ ] อัปโหลดขึ้น GitHub
+[ ] Import Project ใน Vercel
+[ ] กด Deploy
+[ ] Copy ลิงก์ .vercel.app
+[ ] เอาลิงก์ไปสร้าง QR Code
+
+Suggested project name:
+swag-night-runner
+swag-runner-night-city
+faderix-swag-runner
