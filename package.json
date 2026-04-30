@@ -1,15 +1,16 @@
 {
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
     "vite": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "framer-motion": "latest"
+    "framer-motion": "latest",
+    "@supabase/supabase-js": "latest"
   },
   "devDependencies": {}
 }
