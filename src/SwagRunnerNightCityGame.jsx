@@ -1,733 +1,275 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { createClient } from "@supabase/supabase-js";
 
-function Button({ className = "", variant = "", ...props }) {
-  return <button className={`border border-slate-700 ${variant === "outline" ? "bg-slate-900-70 text-white bg-slate-800-hover" : "bg-yellow-400 text-slate-950"} ${className}`} {...props} />;
+const W = 900, H = 500, GROUND = 410;
+const URL = import.meta.env.VITE_SUPABASE_URL;
+const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = URL && KEY ? createClient(URL, KEY) : null;
+
+const LS = {
+  best:"swagRunnerBest", wallet:"swagRunnerWalletCoins", board:"swagRunnerLeaderboard",
+  player:"swagRunnerPlayerName", skin:"swagRunnerSkin", unlocked:"swagRunnerUnlockedSkins",
+  loadout:"swagRunnerAvatarLoadout", parts:"swagRunnerUnlockedParts", quality:"swagRunnerQualityMode"
+};
+
+const EFFECTS=[
+  {id:"classic",name:"Classic Aura",price:0,accent:"#ef4444",glow:"rgba(239,68,68,.45)",trail:"rgba(255,255,255,.18)",wing:false},
+  {id:"gold",name:"Gold Drip Aura",price:250,accent:"#facc15",glow:"rgba(250,204,21,.78)",trail:"rgba(250,204,21,.48)",wing:false},
+  {id:"angel",name:"Dark Angel Aura",price:500,accent:"#a78bfa",glow:"rgba(167,139,250,.70)",trail:"rgba(167,139,250,.48)",wing:true},
+  {id:"toxic",name:"Toxic Neon Aura",price:750,accent:"#22c55e",glow:"rgba(34,197,94,.72)",trail:"rgba(34,197,94,.45)",wing:false},
+];
+const DEFAULT_LOADOUT={hair:"cap-fade",top:"oversized-hoodie",pants:"baggy-gray",shoes:"chunky-white"};
+const DEFAULT_PARTS={hairs:["cap-fade"],tops:["oversized-hoodie"],pants:["baggy-gray"],shoes:["chunky-white"]};
+const PARTS={
+  hairs:[
+    {id:"cap-fade",name:"Cap Fade",price:0,style:"capFade",hair:"#111827",cap:"#ef4444",skinTone:"#d6a37c"},
+    {id:"fluffy-brown",name:"Fluffy Brown",price:220,style:"fluffy",hair:"#5b3a29",skinTone:"#d6a37c"},
+    {id:"short-spike",name:"Short Spike",price:260,style:"spike",hair:"#0f172a",skinTone:"#d6a37c"},
+    {id:"middle-part",name:"Middle Part",price:320,style:"middlePart",hair:"#2b2b2b",skinTone:"#d6a37c"},
+  ],
+  tops:[
+    {id:"oversized-hoodie",name:"Oversized Hoodie",price:0,style:"hoodie",main:"#18181b",accent:"#ef4444",detail:"#27272a"},
+    {id:"varsity-jacket",name:"Varsity Jacket",price:280,style:"varsity",main:"#111827",accent:"#facc15",sleeve:"#e5e7eb"},
+    {id:"tee-layered",name:"Layered Tee",price:240,style:"layeredTee",main:"#0f172a",accent:"#38bdf8",inner:"#f8fafc"},
+    {id:"puffer-black",name:"Puffer Jacket",price:420,style:"puffer",main:"#111111",accent:"#a78bfa",detail:"#27272a"},
+  ],
+  pants:[
+    {id:"baggy-gray",name:"Baggy Gray",price:0,style:"baggy",main:"#52525b",detail:"#27272a"},
+    {id:"cargo-dark",name:"Dark Cargo",price:260,style:"cargo",main:"#334155",detail:"#0f172a"},
+    {id:"jogger-black",name:"Black Jogger",price:220,style:"jogger",main:"#18181b",detail:"#3f3f46"},
+  ],
+  shoes:[
+    {id:"chunky-white",name:"Chunky White",price:0,style:"chunky",main:"#f8fafc",sole:"#cbd5e1"},
+    {id:"high-top-gold",name:"High Top Gold",price:260,style:"highTop",main:"#fef3c7",sole:"#d97706"},
+    {id:"runner-neon",name:"Runner Neon",price:320,style:"runner",main:"#ecfccb",sole:"#22c55e"},
+    {id:"angel-wing-kicks",name:"Angel Wing Kicks",price:460,style:"wingShoes",main:"#fff",sole:"#a78bfa",wing:true},
+  ]
+};
+const DAILY=[
+  {type:"coins",target:60,title:"Daily Hustle",desc:"เก็บเหรียญให้ครบ 60 เหรียญ",reward:75},
+  {type:"score",target:2500,title:"Night Legend",desc:"ทำคะแนนให้ถึง 2,500",reward:100},
+  {type:"combo",target:12,title:"Combo King",desc:"ทำ Combo ให้ถึง x12",reward:125},
+  {type:"dodge",target:8,title:"Clean Dodge",desc:"หลบเฉียด 8 ครั้ง",reward:150},
+];
+
+const get=(k,f)=>{try{return localStorage.getItem(k)||f}catch{return f}};
+const set=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
+const num=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const hit=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+const dist=(a,b)=>Math.hypot(a.x+a.w/2-(b.x+b.w/2),a.y+a.h/2-(b.y+b.h/2));
+const grade=(s,c=1,st=0)=>{const t=num(s)+num(st)*.1+num(c)*45;if(t>=100000)return"SS";if(t>=65000)return"S";if(t>=40000)return"A";if(t>=22000)return"B";if(t>=9000)return"C";return"D"};
+const comboMult=c=>1+Math.min(1.25,(Math.max(1,Math.floor(num(c,1)))-1)*.045);
+const daily=()=>DAILY[new Date().getDate()%DAILY.length];
+
+function normLoadout(l){
+  const src=l&&typeof l==="object"?l:DEFAULT_LOADOUT, legacy={default:"cap-fade",peach:"fluffy-brown",tan:"short-spike"};
+  const ok=(cat,id)=>PARTS[cat].some(p=>p.id===id);
+  return {hair:ok("hairs",src.hair)?src.hair:(legacy[src.head]||DEFAULT_LOADOUT.hair),top:ok("tops",src.top)?src.top:DEFAULT_LOADOUT.top,pants:ok("pants",src.pants)?src.pants:DEFAULT_LOADOUT.pants,shoes:ok("shoes",src.shoes)?src.shoes:DEFAULT_LOADOUT.shoes};
+}
+function normParts(p){
+  const src=p&&typeof p==="object"?p:DEFAULT_PARTS, legacy=Array.isArray(src.heads)?src.heads.map(id=>({default:"cap-fade",peach:"fluffy-brown",tan:"short-spike"}[id])).filter(Boolean):[];
+  const clean=(cat,def)=>Array.from(new Set([...def,...((cat==="hairs"?[...(Array.isArray(src.hairs)?src.hairs:[]),...legacy]:src[cat])||[]).filter(id=>PARTS[cat].some(p=>p.id===id))]));
+  return {hairs:clean("hairs",DEFAULT_PARTS.hairs),tops:clean("tops",DEFAULT_PARTS.tops),pants:clean("pants",DEFAULT_PARTS.pants),shoes:clean("shoes",DEFAULT_PARTS.shoes)};
+}
+const readJSON=(k,f,norm=x=>x)=>{try{return norm(JSON.parse(get(k,JSON.stringify(f))))}catch{return f}};
+const best=()=>num(get(LS.best,"0"));
+const wallet=()=>num(get(LS.wallet,"0"));
+const board=()=>readJSON(LS.board,[]);
+const saveBoard=b=>set(LS.board,JSON.stringify(b.slice(0,10)));
+function addBoard(name,score,coins,style,maxCombo){
+  const n=String(name||"SWAG PLAYER").trim().slice(0,16)||"SWAG PLAYER";
+  const cur=board(), e={id:n,name:n,score:Math.max(0,Math.floor(num(score))),coins:Math.max(0,Math.floor(num(coins))),styleScore:Math.max(0,Math.floor(num(style))),maxCombo:Math.max(1,Math.floor(num(maxCombo,1))),date:new Date().toLocaleDateString("th-TH")};
+  const i=cur.findIndex(x=>x.name===n); if(i>=0){if(e.score>num(cur[i].score))cur[i]=e}else cur.push(e);
+  const out=cur.sort((a,b)=>num(b.score)-num(a.score)).slice(0,10); saveBoard(out); return out;
 }
 
-function Card({ className = "", ...props }) {
-  return <div className={`border ${className}`} {...props} />;
-}
+function Button({className="",variant="default",...p}){return <button className={`btn ${variant==="outline"?"dark":""} ${className}`} {...p}/>}
 
-function CardContent({ className = "", ...props }) {
-  return <div className={className} {...props} />;
-}
+export default function SwagRunnerNightCityGame(){
+  const canvasRef=useRef(null), raf=useRef(null), keys=useRef({}), game=useRef(null), ui=useRef(0);
+  const state=useRef({screen:"landing",status:"ready",playerName:"SWAG PLAYER",skin:"classic",quality:"auto",loadout:DEFAULT_LOADOUT,saved:null});
+  const [screen,setScreen]=useState("landing"),[status,setStatus]=useState("ready"),[playerName,setPlayerName]=useState("SWAG PLAYER");
+  const [score,setScore]=useState(0),[coins,setCoins]=useState(0),[lives,setLives]=useState(3),[combo,setCombo]=useState(1),[maxCombo,setMaxCombo]=useState(1),[styleScore,setStyleScore]=useState(0);
+  const [bestScore,setBestScore]=useState(0),[walletCoins,setWalletCoins]=useState(0),[leaderboard,setLeaderboard]=useState([]);
+  const [skin,setSkin]=useState("classic"),[unlockedEffects,setUnlockedEffects]=useState(["classic"]),[quality,setQuality]=useState("auto");
+  const [loadout,setLoadout]=useState(DEFAULT_LOADOUT),[unlockedParts,setUnlockedParts]=useState(DEFAULT_PARTS),[active,setActive]=useState("leaderboard"),[savedScore,setSavedScore]=useState(null),[toast,setToast]=useState("Ready");
+  const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[user,setUser]=useState(null),[authStatus,setAuthStatus]=useState(supabase?"Guest mode":"Supabase env ยังไม่พร้อม"),[cloudLoading,setCloudLoading]=useState(false);
+  const ch=daily(), locked=status==="playing", finalScore=savedScore??score;
 
-const CANVAS_WIDTH = 900;
-const CANVAS_HEIGHT = 500;
-const GROUND_Y = 410;
-const BEST_KEY = "swagRunnerBest";
-const LEADERBOARD_KEY = "swagRunnerLeaderboard";
-const PLAYER_KEY = "swagRunnerPlayerName";
+  useEffect(()=>{state.current={...state.current,screen,status,playerName,skin,quality,loadout,saved:savedScore}},[screen,status,playerName,skin,quality,loadout,savedScore]);
 
-function rectsOverlap(a, b) {
-  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-}
+  const updateName=v=>{const n=String(v).slice(0,16);setPlayerName(n);set(LS.player,n)};
+  const parts=(l=loadout)=>{const s=normLoadout(l);return{hair:PARTS.hairs.find(p=>p.id===s.hair)||PARTS.hairs[0],top:PARTS.tops.find(p=>p.id===s.top)||PARTS.tops[0],pants:PARTS.pants.find(p=>p.id===s.pants)||PARTS.pants[0],shoes:PARTS.shoes.find(p=>p.id===s.shoes)||PARTS.shoes[0]}};
+  const lockToast=()=>setToast("กำลังเล่นอยู่ — เปลี่ยนชุด/ตั้งค่าได้หลังจบรอบหรือเริ่มรอบใหม่เท่านั้น");
+  const usernameFromUser=(u=user)=>u?.user_metadata?.name||u?.email?.split("@")[0]||playerName||"SWAG PLAYER";
 
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function safeGet(key, fallback) {
-  try {
-    return window.localStorage.getItem(key) || fallback;
-  } catch {
-    return fallback;
+  async function ensureCloudDefaults(u){
+    if(!supabase||!u)return;
+    const username=usernameFromUser(u).slice(0,16)||"SWAG PLAYER";
+    await supabase.from("profiles").upsert({id:u.id,username,updated_at:new Date().toISOString()},{onConflict:"id"});
+    await supabase.from("player_inventory").upsert({user_id:u.id,...DEFAULT_PARTS,effects:["classic"],updated_at:new Date().toISOString()},{onConflict:"user_id",ignoreDuplicates:true});
+    await supabase.from("player_loadouts").upsert({user_id:u.id,...DEFAULT_LOADOUT,skin_effect:"classic",updated_at:new Date().toISOString()},{onConflict:"user_id",ignoreDuplicates:true});
   }
-}
-
-function safeSet(key, value) {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {}
-}
-
-function readBestScore() {
-  return Number(safeGet(BEST_KEY, "0"));
-}
-
-function writeBestScore(value) {
-  safeSet(BEST_KEY, String(value));
-}
-
-function readLeaderboard() {
-  try {
-    const data = JSON.parse(safeGet(LEADERBOARD_KEY, "[]"));
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return [];
+  async function loadCloudPlayer(u){
+    if(!supabase||!u)return; setCloudLoading(true); setAuthStatus("กำลังโหลดข้อมูลผู้เล่น...");
+    try{
+      await ensureCloudDefaults(u);
+      const [{data:p},{data:inv},{data:lo},{data:lb}]=await Promise.all([
+        supabase.from("profiles").select("username,coins,best_score,best_combo,best_style").eq("id",u.id).maybeSingle(),
+        supabase.from("player_inventory").select("hairs,tops,pants,shoes,effects").eq("user_id",u.id).maybeSingle(),
+        supabase.from("player_loadouts").select("hair,top,pants,shoes,skin_effect").eq("user_id",u.id).maybeSingle(),
+        supabase.from("leaderboard").select("user_id,username,score,coins,max_combo,style_score,updated_at").order("score",{ascending:false}).limit(10)
+      ]);
+      if(p?.username) updateName(p.username.slice(0,16));
+      if(Number.isFinite(Number(p?.coins))){setWalletCoins(p.coins);set(LS.wallet,String(p.coins))}
+      if(Number.isFinite(Number(p?.best_score))){setBestScore(p.best_score);set(LS.best,String(p.best_score))}
+      if(inv){const np=normParts(inv);setUnlockedParts(np);set(LS.parts,JSON.stringify(np));const ef=Array.from(new Set(["classic",...(Array.isArray(inv.effects)?inv.effects:[])]));setUnlockedEffects(ef);set(LS.unlocked,JSON.stringify(ef))}
+      if(lo){const nl=normLoadout(lo), ef=EFFECTS.some(e=>e.id===lo.skin_effect)?lo.skin_effect:"classic";setLoadout(nl);setSkin(ef);state.current={...state.current,loadout:nl,skin:ef};set(LS.loadout,JSON.stringify(nl));set(LS.skin,ef)}
+      if(Array.isArray(lb)){const out=lb.map(r=>({id:r.user_id,name:r.username,score:r.score,coins:r.coins,maxCombo:r.max_combo,styleScore:r.style_score,date:new Date(r.updated_at).toLocaleDateString("th-TH")}));setLeaderboard(out);saveBoard(out)}
+      setAuthStatus(`Online save พร้อมใช้งาน: ${u.email}`);
+    }catch(e){console.error(e);setAuthStatus(`โหลดข้อมูลออนไลน์ไม่สำเร็จ: ${e.message}`)}finally{setCloudLoading(false)}
   }
-}
-
-function saveLeaderboard(entries) {
-  safeSet(LEADERBOARD_KEY, JSON.stringify(entries.slice(0, 10)));
-}
-
-function addLeaderboardScore(name, score, coins) {
-  const cleanName = String(name || "SWAG PLAYER").trim().slice(0, 16) || "SWAG PLAYER";
-  const entry = {
-    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    name: cleanName,
-    score,
-    coins,
-    date: new Date().toLocaleDateString("th-TH"),
-  };
-
-  const updated = [...readLeaderboard(), entry]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 10);
-
-  saveLeaderboard(updated);
-  return updated;
-}
-
-function runSelfTests() {
-  console.assert(rectsOverlap({ x: 0, y: 0, w: 10, h: 10 }, { x: 5, y: 5, w: 10, h: 10 }) === true, "overlapping rectangles should collide");
-  console.assert(rectsOverlap({ x: 0, y: 0, w: 10, h: 10 }, { x: 12, y: 12, w: 10, h: 10 }) === false, "separated rectangles should not collide");
-  console.assert(clamp(15, 0, 10) === 10, "clamp should cap high values");
-  console.assert(clamp(-2, 0, 10) === 0, "clamp should cap low values");
-  console.assert(clamp(6, 0, 10) === 6, "clamp should keep in-range values");
-}
-
-export default function SwagRunnerNightCityGame() {
-  const canvasRef = useRef(null);
-  const animationRef = useRef(null);
-  const keysRef = useRef({});
-  const gameRef = useRef(null);
-
-  const [screen, setScreen] = useState("landing");
-  const [status, setStatus] = useState("ready");
-  const [playerName, setPlayerName] = useState("SWAG PLAYER");
-  const [score, setScore] = useState(0);
-  const [coins, setCoins] = useState(0);
-  const [lives, setLives] = useState(3);
-  const [best, setBest] = useState(0);
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [savedGameOverScore, setSavedGameOverScore] = useState(null);
-
-  function freshGame() {
-    return {
-      speed: 5,
-      distance: 0,
-      score: 0,
-      coins: 0,
-      lives: 3,
-      invincible: 0,
-      player: {
-        x: 120,
-        y: GROUND_Y - 82,
-        w: 50,
-        h: 82,
-        vy: 0,
-        onGround: true,
-        ducking: false,
-      },
-      obstacles: [],
-      coinItems: [],
-      particles: [],
-      nextObstacle: 90,
-      nextCoin: 45,
-      buildings: Array.from({ length: 12 }, (_, i) => ({
-        x: i * 95,
-        w: 70 + Math.random() * 45,
-        h: 90 + Math.random() * 190,
-        windows: Math.floor(4 + Math.random() * 7),
-      })),
-      stars: Array.from({ length: 70 }, () => ({
-        x: Math.random() * CANVAS_WIDTH,
-        y: Math.random() * 240,
-        r: Math.random() * 1.6 + 0.4,
-      })),
-    };
+  async function handleEmailAuth(mode){
+    if(locked)return lockToast(); if(!supabase)return setAuthStatus("Supabase env ยังไม่พร้อม"); if(!email||password.length<6)return setAuthStatus("กรอก Email และ Password อย่างน้อย 6 ตัว");
+    setCloudLoading(true); setAuthStatus(mode==="signup"?"กำลังสมัครสมาชิก...":"กำลังเข้าสู่ระบบ...");
+    try{
+      const res=mode==="signup"?await supabase.auth.signUp({email,password,options:{data:{name:playerName||"SWAG PLAYER"}}}):await supabase.auth.signInWithPassword({email,password});
+      if(res.error)throw res.error; const u=res.data.user||res.data.session?.user;
+      if(u){setUser(u);await loadCloudPlayer(u)}else setAuthStatus("สมัครแล้ว: กรุณาเช็กอีเมลเพื่อยืนยันก่อนเข้าสู่ระบบ");
+    }catch(e){console.error(e);setAuthStatus(e.message||"เข้าสู่ระบบไม่สำเร็จ")}finally{setCloudLoading(false)}
   }
-
-  function updatePlayerName(value) {
-    const nextName = value.slice(0, 16);
-    setPlayerName(nextName);
-    safeSet(PLAYER_KEY, nextName);
+  async function logout(){if(locked)return lockToast(); if(!supabase)return; await supabase.auth.signOut(); setUser(null); setAuthStatus("ออกจากระบบแล้ว: Guest mode")}
+  async function saveCloudLoadout(nl=loadout,ns=skin,np=unlockedParts,ne=unlockedEffects){
+    if(!supabase||!user)return;
+    try{
+      await Promise.all([
+        supabase.from("player_loadouts").upsert({user_id:user.id,...normLoadout(nl),skin_effect:ns,updated_at:new Date().toISOString()},{onConflict:"user_id"}),
+        supabase.from("player_inventory").upsert({user_id:user.id,...normParts(np),effects:Array.from(new Set(["classic",...ne])),updated_at:new Date().toISOString()},{onConflict:"user_id"})
+      ]);
+      setAuthStatus("บันทึก Wardrobe ออนไลน์แล้ว");
+    }catch(e){console.error(e);setAuthStatus(`Save Wardrobe ไม่สำเร็จ: ${e.message}`)}
   }
-
-  function resetGame() {
-    gameRef.current = freshGame();
-    keysRef.current = {};
-    setSavedGameOverScore(null);
-    setScore(0);
-    setCoins(0);
-    setLives(3);
-    setStatus("playing");
-    setScreen("game");
-  }
-
-  function goLanding() {
-    setStatus("ready");
-    setScreen("landing");
-  }
-
-  function clearLeaderboard() {
-    saveLeaderboard([]);
-    setLeaderboard([]);
+  async function saveCloudResult(fs,fc,fm,fst){
+    if(!supabase||!user)return;
+    try{
+      const username=(playerName||usernameFromUser()).slice(0,16)||"SWAG PLAYER";
+      const {data:p}=await supabase.from("profiles").select("coins,best_score,best_combo,best_style").eq("id",user.id).maybeSingle();
+      const nextCoins=num(p?.coins)+num(fc), nextBest=Math.max(num(p?.best_score),num(fs)), nextCombo=Math.max(num(p?.best_combo,1),num(fm,1)), nextStyle=Math.max(num(p?.best_style),num(fst));
+      await supabase.from("profiles").upsert({id:user.id,username,coins:nextCoins,best_score:nextBest,best_combo:nextCombo,best_style:nextStyle,updated_at:new Date().toISOString()},{onConflict:"id"});
+      const {data:old}=await supabase.from("leaderboard").select("score").eq("user_id",user.id).maybeSingle();
+      if(!old||num(fs)>num(old.score))await supabase.from("leaderboard").upsert({user_id:user.id,username,score:Math.floor(num(fs)),coins:Math.floor(num(fc)),max_combo:Math.floor(num(fm,1)),style_score:Math.floor(num(fst)),updated_at:new Date().toISOString()},{onConflict:"user_id"});
+      const {data:lb}=await supabase.from("leaderboard").select("user_id,username,score,coins,max_combo,style_score,updated_at").order("score",{ascending:false}).limit(10);
+      if(Array.isArray(lb)){const out=lb.map(r=>({id:r.user_id,name:r.username,score:r.score,coins:r.coins,maxCombo:r.max_combo,styleScore:r.style_score,date:new Date(r.updated_at).toLocaleDateString("th-TH")}));setLeaderboard(out);saveBoard(out)}
+      setWalletCoins(nextCoins);set(LS.wallet,String(nextCoins));setBestScore(nextBest);set(LS.best,String(nextBest));setAuthStatus("บันทึกคะแนนออนไลน์แล้ว");
+    }catch(e){console.error(e);setAuthStatus(`Save score ไม่สำเร็จ: ${e.message}`)}
   }
 
-  function pressJump() {
-    if (screen !== "game") return;
-    if (status === "ready" || status === "gameover") {
-      resetGame();
-      return;
+  function fresh(){
+    const low=quality==="low"||(quality==="auto"&&innerWidth<768);
+    return{visual:low?"low":"high",speed:5,distance:0,score:0,bonus:0,anim:0,coins:0,lives:3,combo:1,timer:0,maxCombo:1,style:0,dodges:0,gameOver:false,inv:0,shield:0,magnet:0,boost:0,heat:0,shake:0,player:{x:120,y:GROUND-76,w:46,h:76,vy:0,on:true,duck:false},obs:[],coinItems:[],power:[],particles:[],texts:[],trails:[],nextObs:90,nextCoin:45,nextPower:260,build:Array.from({length:12},(_,i)=>({x:i*95,w:70+Math.random()*45,h:90+Math.random()*190,win:Math.floor(4+Math.random()*7)})),stars:Array.from({length:low?40:70},()=>({x:Math.random()*W,y:Math.random()*240,r:Math.random()*1.6+.4})),rain:Array.from({length:low?42:95},()=>({x:Math.random()*W,y:Math.random()*H,len:8+Math.random()*18,spd:8+Math.random()*7,a:.12+Math.random()*.22}))};
+  }
+  function reset(){game.current=fresh();keys.current={};state.current={...state.current,status:"playing",screen:"game",saved:null};setSavedScore(null);setScore(0);setCoins(0);setLives(3);setCombo(1);setMaxCombo(1);setStyleScore(0);setStatus("playing");setScreen("game");setToast("Run started!")}
+  function goLanding(){state.current={...state.current,status:"ready",screen:"landing"};setStatus("ready");setScreen("landing")}
+  function clearBoard(){if(locked)return lockToast(); saveBoard([]);setLeaderboard([])}
+  function cycleQuality(){if(locked)return lockToast(); const q=quality==="auto"?"high":quality==="high"?"low":"auto";setQuality(q);set(LS.quality,q);state.current={...state.current,quality:q};setToast(`Quality ${q.toUpperCase()}`)}
+  function equipEffect(id){
+    if(locked)return lockToast(); const e=EFFECTS.find(x=>x.id===id); if(!e)return;
+    if(unlockedEffects.includes(id)){setSkin(id);set(LS.skin,id);state.current={...state.current,skin:id};setToast(`${e.name} equipped`);saveCloudLoadout(loadout,id);return}
+    if(walletCoins<e.price)return setToast(`ต้องมี ${e.price} coins`);
+    const nw=walletCoins-e.price, ne=[...unlockedEffects,id];setWalletCoins(nw);set(LS.wallet,String(nw));setUnlockedEffects(ne);set(LS.unlocked,JSON.stringify(ne));setSkin(id);set(LS.skin,id);saveCloudLoadout(loadout,id,unlockedParts,ne)
+  }
+  function equipPart(cat,item){
+    if(locked)return lockToast(); const key={hairs:"hair",tops:"top",pants:"pants",shoes:"shoes"}[cat]; if(!key)return;
+    if(!unlockedParts[cat].includes(item.id)){
+      if(walletCoins<item.price)return setToast(`ต้องมี ${item.price} coins`);
+      const nw=walletCoins-item.price, np=normParts({...unlockedParts,[cat]:[...unlockedParts[cat],item.id]});setWalletCoins(nw);set(LS.wallet,String(nw));setUnlockedParts(np);set(LS.parts,JSON.stringify(np));
+      const nl=normLoadout({...loadout,[key]:item.id});setLoadout(nl);set(LS.loadout,JSON.stringify(nl));state.current={...state.current,loadout:nl};saveCloudLoadout(nl,skin,np,unlockedEffects);return;
     }
-    keysRef.current.Space = true;
-    window.setTimeout(() => {
-      keysRef.current.Space = false;
-    }, 120);
+    const nl=normLoadout({...loadout,[key]:item.id});setLoadout(nl);set(LS.loadout,JSON.stringify(nl));state.current={...state.current,loadout:nl};setToast(`${item.name} equipped`);saveCloudLoadout(nl);
   }
+  function pressJump(){if(screen!=="game")return;if(status!=="playing")return reset();keys.current.Space=true;setTimeout(()=>keys.current.Space=false,120)}
+  function pressDuck(v){if(screen!=="game")return;if(status!=="playing"&&v)return reset();keys.current.ArrowDown=v}
 
-  function pressDuck(isPressed) {
-    if (screen !== "game") return;
-    if (status === "ready" || status === "gameover") {
-      if (isPressed) resetGame();
-      return;
+  useEffect(()=>{
+    setBestScore(best());setWalletCoins(wallet());setLeaderboard(board());updateName(get(LS.player,"SWAG PLAYER"));
+    const ue=readJSON(LS.unlocked,["classic"],x=>Array.isArray(x)?Array.from(new Set(["classic",...x])):["classic"]);setUnlockedEffects(ue);
+    const s=get(LS.skin,"classic");setSkin(ue.includes(s)?s:"classic");const q=get(LS.quality,"auto");setQuality(["auto","high","low"].includes(q)?q:"auto");
+    const lo=readJSON(LS.loadout,DEFAULT_LOADOUT,normLoadout), up=readJSON(LS.parts,DEFAULT_PARTS,normParts);setLoadout(lo);setUnlockedParts(up);state.current={...state.current,loadout:lo,skin:s,quality:q};
+    if(supabase){supabase.auth.getSession().then(({data})=>{const u=data.session?.user||null;if(u){setUser(u);loadCloudPlayer(u)}});const {data:l}=supabase.auth.onAuthStateChange((_e,session)=>{const u=session?.user||null;setUser(u);if(u)loadCloudPlayer(u);else setAuthStatus("Guest mode")});return()=>l.subscription.unsubscribe()}
+  },[]);
+  useEffect(()=>{const down=e=>{const t=e.target?.tagName?.toLowerCase();if(t==="input"||t==="textarea"||e.target?.isContentEditable)return;keys.current[e.code]=true;if(["Space","ArrowUp","ArrowDown"].includes(e.code))e.preventDefault();if(screen==="landing"&&e.code==="Enter")reset();if(screen==="game"&&status!=="playing"&&e.code==="Space")reset()};const up=e=>keys.current[e.code]=false;addEventListener("keydown",down);addEventListener("keyup",up);return()=>{removeEventListener("keydown",down);removeEventListener("keyup",up)}},[screen,status]);
+
+  useEffect(()=>{
+    const c=canvasRef.current;if(!c)return;const ctx=c.getContext("2d"),dpr=Math.min(devicePixelRatio||1,2);c.width=W*dpr;c.height=H*dpr;c.style.width="100%";ctx.setTransform(dpr,0,0,dpr,0,0);game.current=game.current||fresh();
+    const rr=(x,y,w,h,r)=>{r=clamp(r,0,Math.min(w,h)/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()};
+    const shadow=(x,y,w,h,a=.28)=>{const g=ctx.createRadialGradient(x,y,2,x,y,w/2);g.addColorStop(0,`rgba(0,0,0,${a})`);g.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(x,y,w/2,h/2,0,0,Math.PI*2);ctx.fill()};
+    const part=(x,y,type,n=10)=>{for(let i=0;i<n;i++)game.current.particles.push({x,y,vx:(Math.random()-.5)*5,vy:-Math.random()*5-1,life:26,type})};
+    const text=(txt,x,y,type="score")=>game.current.texts.push({txt,x,y,life:55,type});
+
+    function update(){
+      const g=game.current, rt=state.current;if(rt.screen!=="game"||rt.status!=="playing")return;const p=g.player, boost=g.boost>0?1.75:1;
+      const jump=keys.current.Space||keys.current.ArrowUp||keys.current.KeyW;p.duck=!!(keys.current.ArrowDown||keys.current.KeyS);if(jump&&p.on){p.vy=-15.5;p.on=false}
+      p.vy+=.78;p.y+=p.vy;const th=p.duck&&p.on?52:76,b=p.y+p.h;p.h+=(th-p.h)*.35;p.y=b-p.h;if(p.y+p.h>=GROUND){p.y=GROUND-p.h;p.vy=0;p.on=true}
+      if(g.timer>0)g.timer--;if(g.timer<=0&&g.combo>1)g.combo=Math.max(1,g.combo-.02);["inv","shield","magnet","boost","shake"].forEach(k=>{if(g[k]>0)g[k]--});
+      g.anim+=p.on?(p.duck?.12:.22*boost):.075;g.distance+=g.speed*boost;if(g.boost>0)g.bonus+=1.35+g.speed*.06+Math.max(1,g.combo)*.08;
+      const ef=EFFECTS.find(e=>e.id===rt.skin)||EFFECTS[0];if((p.on||g.boost>0)&&Math.random()<(g.visual==="low"?.18:.46))g.trails.push({x:p.x+20,y:p.y+p.h-5,size:g.boost>0?8:5,life:g.visual==="low"?12:18,max:g.visual==="low"?12:18,color:ef.trail});
+      g.speed+=.0028;g.heat=clamp(g.heat-.006,0,100);g.score=Math.floor((Math.floor(g.distance/8)+g.coins*25+g.style)*comboMult(g.combo)+g.bonus);
+      if(--g.nextObs<=0){const r=Math.random(),type=r>.72?"barrier":r>.42?"car":"police";g.obs.push({type,x:W+30,y:type==="car"?GROUND-48:type==="barrier"?GROUND-38:GROUND-74,w:type==="car"?82:type==="barrier"?56:42,h:type==="car"?48:type==="barrier"?38:74,sc:false});g.nextObs=Math.max(42,76+Math.random()*76-g.speed*4)}
+      if(--g.nextCoin<=0){const arc=Math.random()>.45;for(let i=0;i<5;i++)g.coinItems.push({x:W+25+i*34,y:arc?GROUND-130-Math.sin(i/4*Math.PI)*55:GROUND-72,w:22,h:22,spin:Math.random()*6});g.nextCoin=84+Math.random()*85}
+      if(--g.nextPower<=0){const ts=["shield","magnet","boost"],type=ts[Math.floor(Math.random()*ts.length)];g.power.push({type,x:W+40,y:GROUND-155-Math.random()*75,w:30,h:30,spin:0});g.nextPower=360+Math.random()*260}
+      g.obs.forEach(o=>o.x-=(g.speed+(o.type==="car"?1.8:o.type==="barrier"?.8:.4))*boost);
+      g.coinItems.forEach(co=>{if(g.magnet>0&&dist(p,co)<245){const pull=clamp(.08+g.speed*.004,.08,.18);co.x+=(p.x+p.w/2-co.x)*pull;co.y+=(p.y+p.h/2-co.y)*pull}co.x-=g.speed*boost;co.spin+=.2});
+      g.power.forEach(u=>{u.x-=g.speed*boost;u.spin+=.12});g.obs=g.obs.filter(o=>o.x+o.w>-30);g.coinItems=g.coinItems.filter(co=>co.x+co.w>-30);g.power=g.power.filter(u=>u.x+u.w>-30);
+      const hb=p.duck&&p.on?{x:p.x+10,y:p.y+12,w:p.w-20,h:p.h-16}:!p.on?{x:p.x+10,y:p.y+8,w:p.w-20,h:p.h-16}:{x:p.x+9,y:p.y+8,w:p.w-18,h:p.h-13};
+      g.coinItems=g.coinItems.filter(co=>{if(hit(hb,co)){g.combo=Math.min(25,g.combo+Math.min(.35,.09+g.combo*.006));g.timer=120;g.maxCombo=Math.max(g.maxCombo,Math.floor(g.combo));g.coins++;g.style+=Math.floor(2*g.combo);part(co.x+10,co.y+10,"coin",10);return false}return true});
+      g.power=g.power.filter(u=>{if(hit(hb,u)){if(u.type==="shield"){g.shield=720;setToast("Shield activated")}if(u.type==="magnet"){g.magnet=780;setToast("Magnet activated")}if(u.type==="boost"){g.boost=540;setToast("Boost activated")}g.style+=80;text(u.type.toUpperCase(),u.x,u.y-12,"power");part(u.x+15,u.y+15,"power",g.visual==="low"?8:14);return false}return true});
+      for(const o of g.obs){const ob={x:o.x+5,y:o.y+5,w:o.w-10,h:o.h-8};if(!o.sc&&o.x+o.w<p.x&&o.x+o.w>p.x-26){o.sc=true;const vg=Math.abs((p.y+p.h)-(o.y+o.h)),clean=o.type==="barrier"&&p.y+p.h<o.y+22||o.type==="police"&&p.duck&&vg<45||o.type!=="barrier"&&vg<34&&!p.duck;if(!hit(hb,ob)&&clean){g.dodges++;g.style+=75;g.combo=Math.min(25,g.combo+.55);g.timer=120;g.maxCombo=Math.max(g.maxCombo,Math.floor(g.combo));text("CLEAN DODGE +75",p.x,p.y-12,"style")}}
+        if(g.inv<=0&&hit(hb,ob)){if(g.shield>0){g.shield=0;g.inv=42;g.heat=clamp(g.heat+24,0,100);g.shake=11;text("SHIELD BLOCK",p.x,p.y-18,"power");o.x-=100}else{g.lives--;g.inv=90;g.combo=1;g.timer=0;g.heat=clamp(g.heat+42,0,100);g.shake=18;o.x-=80;setToast(g.lives<=0?"โดนจับแล้ว!":"ตำรวจเริ่มไล่หนักขึ้น!");if(g.lives<=0&&!g.gameOver){g.gameOver=true;const fs=g.score,fc=g.coins,fst=g.style,fm=g.maxCombo;const nb=Math.max(fs,best());set(LS.best,String(nb));const nw=wallet()+fc;set(LS.wallet,String(nw));setWalletCoins(nw);setBestScore(nb);const bd=addBoard(rt.playerName,fs,fc,fst,fm);setLeaderboard(bd);setSavedScore(fs);state.current={...state.current,status:"gameover",saved:fs};setStatus("gameover");saveCloudResult(fs,fc,fm,fst)}}break}}
+      g.trails.forEach(t=>{t.x-=g.speed*.75*boost;t.life--});g.trails=g.trails.filter(t=>t.life>0).slice(-34);g.particles.forEach(pt=>{pt.x+=pt.vx;pt.y+=pt.vy;pt.vy+=.25;pt.life--});g.particles=g.particles.filter(pt=>pt.life>0);g.texts.forEach(t=>{t.y-=.75;t.life--});g.texts=g.texts.filter(t=>t.life>0);g.build.forEach(b=>{b.x-=g.speed*.28*boost;if(b.x+b.w<0){b.x=W+Math.random()*120;b.w=70+Math.random()*45;b.h=90+Math.random()*190;b.win=Math.floor(4+Math.random()*7)}});g.stars.forEach(s=>{s.x-=g.speed*.08*boost;if(s.x<0)s.x=W});g.rain.forEach(r=>{r.x-=g.speed*.35*boost;r.y+=r.spd*boost;if(r.y>H+30||r.x<-30){r.x=Math.random()*W+40;r.y=-30}});
+      const now=performance.now();if(now-ui.current>100||g.lives<=0){ui.current=now;setScore(g.score);setCoins(g.coins);setLives(g.lives);setCombo(Math.floor(g.combo));setMaxCombo(g.maxCombo);setStyleScore(g.style)}
     }
-    keysRef.current.ArrowDown = isPressed;
-  }
-
-  function handleCanvasTouch(e) {
-    e.preventDefault();
-    const touch = e.changedTouches?.[0];
-    const canvas = canvasRef.current;
-    if (!touch || !canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const localX = touch.clientX - rect.left;
-    if (localX < rect.width * 0.42) {
-      pressDuck(true);
-    } else {
-      pressJump();
+    function drawPlayer(g){
+      const p=g.player,ef=EFFECTS.find(e=>e.id===state.current.skin)||EFFECTS[0],ps=parts(state.current.loadout);if(g.inv>0&&Math.floor(g.inv/6)%2===0)return;
+      const run=g.anim,running=p.on&&!p.duck,bob=running?Math.sin(run*2)*2:!p.on?-2.2:0,leg=running?Math.sin(run)*12:!p.on?8:0,arm=running?Math.sin(run+Math.PI)*10:!p.on?-12:p.duck?6:0,hy=p.duck&&p.on?17:23,shoe=running?Math.sin(run)*4.2:!p.on?2.5:0;
+      ctx.save();ctx.translate(p.x,p.y+bob);ctx.shadowColor=ef.glow;ctx.shadowBlur=g.visual==="low"?6:14;ctx.shadowOffsetY=4;if(g.shield>0){ctx.strokeStyle="rgba(96,165,250,.75)";ctx.lineWidth=4;ctx.beginPath();ctx.arc(23,39,48,0,Math.PI*2);ctx.stroke()}if(ef.wing){ctx.fillStyle="rgba(255,255,255,.6)";ctx.beginPath();ctx.ellipse(-5,36,18,34,-.55,0,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(15,23,42,.72)";ctx.beginPath();ctx.ellipse(52,37,18,34,.55,0,Math.PI*2);ctx.fill()}
+      const drawLeg=(x,rot,w,h)=>{ctx.save();ctx.translate(x,p.h-32);ctx.rotate(rot*Math.PI/180);rr(-w/2,0,w,h,7);ctx.fill();ctx.restore()};ctx.fillStyle=ps.pants.main;if(ps.pants.style==="baggy"){const gr=ctx.createLinearGradient(10,p.h-32,38,p.h);gr.addColorStop(0,ps.pants.main);gr.addColorStop(1,ps.pants.detail);ctx.fillStyle=gr;drawLeg(18,leg,13,31);drawLeg(32,-leg,13,31)}else if(ps.pants.style==="cargo"){drawLeg(18,leg,12,31);drawLeg(32,-leg,12,31);ctx.fillStyle=ps.pants.detail;ctx.fillRect(11,p.h-20,6,5);ctx.fillRect(31,p.h-20,6,5)}else{drawLeg(18,leg,11,28);drawLeg(32,-leg,11,28);ctx.fillStyle=ps.pants.detail;ctx.fillRect(13,p.h-5,9,2);ctx.fillRect(27,p.h-5,9,2)}
+      ctx.fillStyle=ps.shoes.main;if(ps.shoes.style==="highTop"){rr(6+shoe,p.h-12,18,13,5);ctx.fill();rr(25-shoe,p.h-12,18,13,5);ctx.fill()}else{rr(6+shoe,p.h-8,20,9,5);ctx.fill();rr(24-shoe,p.h-8,22,9,5);ctx.fill()}if(ps.shoes.style==="wingShoes"){ctx.fillStyle="rgba(255,255,255,.72)";ctx.beginPath();ctx.ellipse(4+shoe,p.h-7,7,3.5,-.2,0,Math.PI*2);ctx.ellipse(47-shoe,p.h-7,7,3.5,.2,0,Math.PI*2);ctx.fill()}ctx.fillStyle=ps.shoes.sole;ctx.fillRect(8+shoe,p.h-2,18,2);ctx.fillRect(26-shoe,p.h-2,18,2);
+      if(ps.top.style==="hoodie"){const gr=ctx.createLinearGradient(0,hy,48,hy+34);gr.addColorStop(0,ps.top.accent);gr.addColorStop(.18,ps.top.main);gr.addColorStop(1,"#09090b");ctx.fillStyle=gr;rr(5,hy,38,30,13);ctx.fill();ctx.fillStyle=ps.top.detail;rr(9,hy+17,30,13,7);ctx.fill()}else if(ps.top.style==="varsity"){ctx.fillStyle=ps.top.main;rr(8,hy,32,29,10);ctx.fill();ctx.fillStyle=ps.top.sleeve;rr(4,hy+2,9,24,6);ctx.fill();rr(35,hy+2,9,24,6);ctx.fill();ctx.fillStyle=ps.top.accent;ctx.fillRect(23,hy+2,3,25)}else if(ps.top.style==="layeredTee"){ctx.fillStyle=ps.top.inner;rr(7,hy+4,36,28,10);ctx.fill();ctx.fillStyle=ps.top.main;rr(9,hy,32,23,9);ctx.fill();ctx.fillStyle=ps.top.accent;ctx.fillRect(14,hy+8,22,3)}else{ctx.fillStyle=ps.top.main;rr(6,hy,37,32,12);ctx.fill();ctx.strokeStyle=ps.top.detail;for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(9,hy+6+i*6);ctx.lineTo(40,hy+6+i*6);ctx.stroke()}ctx.fillStyle=ps.top.accent;ctx.fillRect(23,hy+3,2,23)}
+      ctx.lineCap="round";ctx.strokeStyle=ps.top.style==="varsity"?ps.top.sleeve:ps.top.main;ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(8,hy+15);ctx.lineTo(3+arm*.2,hy+31+arm*.28);ctx.moveTo(42,hy+15);ctx.lineTo(47-arm*.2,hy+31-arm*.28);ctx.stroke();
+      const sg=ctx.createRadialGradient(19,10,3,24,15,17);sg.addColorStop(0,"#ffd6b4");sg.addColorStop(.55,ps.hair.skinTone||"#d6a37c");sg.addColorStop(1,"#9a6a4f");ctx.fillStyle=sg;ctx.beginPath();ctx.arc(24,15,15.5,0,Math.PI*2);ctx.fill();ctx.fillStyle=ps.hair.hair;if(ps.hair.style==="capFade"){ctx.beginPath();ctx.arc(22,10,17,Math.PI,Math.PI*2);ctx.fill();ctx.fillStyle=ps.hair.cap||"#ef4444";rr(9,-1,30,8,6);ctx.fill();ctx.fillRect(36,3,13,4)}else if(ps.hair.style==="fluffy"){ctx.beginPath();ctx.arc(15,9,8,0,Math.PI*2);ctx.arc(23,5,10,0,Math.PI*2);ctx.arc(31,8,8,0,Math.PI*2);ctx.arc(37,12,6,0,Math.PI*2);ctx.fill()}else if(ps.hair.style==="spike"){ctx.beginPath();ctx.moveTo(9,12);ctx.lineTo(13,2);ctx.lineTo(18,9);ctx.lineTo(23,0);ctx.lineTo(28,9);ctx.lineTo(34,2);ctx.lineTo(39,13);ctx.lineTo(39,16);ctx.lineTo(9,16);ctx.closePath();ctx.fill()}else{ctx.beginPath();ctx.arc(18,8,10,Math.PI,Math.PI*2);ctx.arc(30,8,10,Math.PI,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(255,255,255,.08)";ctx.fillRect(23,1,2,12)}
+      ctx.fillStyle="#0f172a";ctx.beginPath();ctx.arc(19,15,1.7,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(29,15,1.7,0,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(244,114,182,.38)";ctx.beginPath();ctx.arc(16,19,3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(32,19,3,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#7c2d12";ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(24,20,4,.2,Math.PI-.2);ctx.stroke();ctx.restore();
     }
-  }
+    function draw(){
+      const g=game.current,sx=g.shake>0?(Math.random()-.5)*g.shake:0,sy=g.shake>0?(Math.random()-.5)*g.shake*.4:0;ctx.save();ctx.translate(sx,sy);ctx.clearRect(-20,-20,W+40,H+40);const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,"#020617");sky.addColorStop(.55,"#111827");sky.addColorStop(1,g.heat>35?"#7f1d1d":"#312e81");ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);ctx.fillStyle="rgba(255,255,255,.86)";ctx.beginPath();ctx.arc(760,72,34,0,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(2,6,23,.85)";ctx.beginPath();ctx.arc(748,61,31,0,Math.PI*2);ctx.fill();
+      g.stars.forEach(s=>{ctx.fillStyle="rgba(255,255,255,.75)";ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill()});g.build.forEach((b,i)=>{ctx.fillStyle=i%2?"#0f172a":"#111827";ctx.fillRect(b.x,GROUND-b.h,b.w,b.h);ctx.fillStyle=g.heat>35?"rgba(248,113,113,.75)":"rgba(250,204,21,.72)";for(let r=0;r<b.win;r++)for(let j=0;j<3;j++)if((r+j+i)%3!==0)ctx.fillRect(b.x+12+j*18,GROUND-b.h+18+r*24,7,10)});
+      ctx.fillStyle="#18181b";ctx.fillRect(0,GROUND,W,H-GROUND);ctx.strokeStyle="rgba(250,204,21,.75)";ctx.lineWidth=5;ctx.setLineDash([38,32]);ctx.beginPath();ctx.moveTo((-g.distance*.7)%70,458);ctx.lineTo(W,458);ctx.stroke();ctx.setLineDash([]);
+      if(g.heat>35){ctx.fillStyle="rgba(239,68,68,.18)";ctx.fillRect(0,0,W,H);ctx.fillStyle="#ef4444";ctx.font="bold 20px sans-serif";ctx.fillText("POLICE CHASE!",24,46)}
+      g.obs.forEach(o=>shadow(o.x+o.w/2,GROUND-4,o.w*1.2,18,.32));shadow(g.player.x+g.player.w/2,GROUND-3,62,16,.32);g.trails.forEach(t=>{ctx.globalAlpha=Math.max(t.life/t.max,0);ctx.fillStyle=t.color;ctx.beginPath();ctx.arc(t.x,t.y,t.size*(t.life/t.max),0,Math.PI*2);ctx.fill();ctx.globalAlpha=1});
+      g.coinItems.forEach(co=>{ctx.save();ctx.translate(co.x+11,co.y+11);ctx.scale(Math.abs(Math.cos(co.spin))*.55+.35,1);ctx.fillStyle="#facc15";ctx.beginPath();ctx.arc(0,0,11,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#f97316";ctx.lineWidth=2;ctx.stroke();ctx.fillStyle="#fff7ed";ctx.font="bold 13px sans-serif";ctx.textAlign="center";ctx.fillText("$",0,5);ctx.restore()});
+      g.power.forEach(u=>{const icon=u.type==="shield"?"🛡":u.type==="magnet"?"🧲":"⚡";ctx.save();ctx.translate(u.x+15,u.y+15);ctx.rotate(u.spin);ctx.fillStyle=u.type==="shield"?"#60a5fa":u.type==="magnet"?"#f472b6":"#facc15";ctx.beginPath();ctx.arc(0,0,17,0,Math.PI*2);ctx.fill();ctx.font="18px sans-serif";ctx.textAlign="center";ctx.fillText(icon,0,7);ctx.restore()});
+      g.obs.forEach(o=>{if(o.type==="barrier"){ctx.fillStyle="#f97316";rr(o.x,o.y,o.w,o.h,7);ctx.fill();return}if(o.type==="car"){ctx.fillStyle="#1e3a8a";rr(o.x,o.y+12,o.w,32,10);ctx.fill();ctx.fillStyle="#0f172a";rr(o.x+16,o.y,42,24,7);ctx.fill();ctx.fillStyle="#f8fafc";ctx.font="bold 13px sans-serif";ctx.fillText("POLICE",o.x+17,o.y+33)}else{ctx.fillStyle="#1e40af";rr(o.x+6,o.y+24,30,45,8);ctx.fill();ctx.fillStyle="#d6a37c";ctx.beginPath();ctx.arc(o.x+21,o.y+15,13,0,Math.PI*2);ctx.fill()}});
+      drawPlayer(g);g.rain.forEach(r=>{ctx.strokeStyle=`rgba(226,232,240,${r.a})`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(r.x,r.y);ctx.lineTo(r.x-5,r.y+r.len);ctx.stroke()});g.particles.forEach(pt=>{ctx.globalAlpha=Math.max(pt.life/26,0);ctx.fillStyle=pt.type==="coin"?"#facc15":pt.type==="power"?"#60a5fa":"#ef4444";ctx.beginPath();ctx.arc(pt.x,pt.y,3,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1});g.texts.forEach(t=>{ctx.globalAlpha=Math.max(t.life/55,0);ctx.fillStyle=t.type==="power"?"#60a5fa":"#facc15";ctx.font="900 18px sans-serif";ctx.fillText(t.txt,t.x,t.y);ctx.globalAlpha=1});ctx.restore();
+      ctx.fillStyle="rgba(2,6,23,.55)";rr(14,14,285,82,18);ctx.fill();ctx.fillStyle="#fff";ctx.font="bold 16px sans-serif";ctx.fillText(`Combo x${Math.max(1,Math.floor(g.combo))}`,30,42);ctx.fillText(`Style +${g.style}`,30,70);ctx.fillStyle="#facc15";ctx.fillText(`Heat ${Math.floor(g.heat)}%`,150,70);
+      if(state.current.status!=="playing"){ctx.fillStyle="rgba(2,6,23,.7)";ctx.fillRect(0,0,W,H);ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="800 42px sans-serif";ctx.fillText(state.current.status==="gameover"?"โดนจับแล้ว!":"SWAG NIGHT RUNNER",W/2,190);ctx.font="18px sans-serif";ctx.fillText("มือถือ: แตะขวาเพื่อกระโดด • แตะซ้ายค้างเพื่อหมอบ",W/2,232);ctx.fillStyle="#facc15";ctx.font="bold 22px sans-serif";const fs=state.current.saved??g.score;ctx.fillText(state.current.status==="gameover"?`คะแนนสุดท้าย: ${fs} • Rank ${grade(fs,g.maxCombo,g.style)}`:"Combo • Power-up • Police Chase • Cloud Save",W/2,268);ctx.textAlign="start"}
+    }
+    const loop=()=>{update();draw();raf.current=requestAnimationFrame(loop)};loop();return()=>cancelAnimationFrame(raf.current);
+  },[screen]);
 
-  function handleCanvasTouchEnd(e) {
-    e.preventDefault();
-    pressDuck(false);
-  }
-
-  useEffect(() => {
-    runSelfTests();
-    setBest(readBestScore());
-    setLeaderboard(readLeaderboard());
-    setPlayerName(safeGet(PLAYER_KEY, "SWAG PLAYER"));
-  }, []);
-
-  useEffect(() => {
-    const down = (e) => {
-      keysRef.current[e.code] = true;
-      if (["Space", "ArrowUp", "ArrowDown"].includes(e.code)) e.preventDefault();
-      if (screen === "landing" && e.code === "Enter") resetGame();
-      if (screen === "game" && (status === "ready" || status === "gameover") && e.code === "Space") resetGame();
-    };
-
-    const up = (e) => {
-      keysRef.current[e.code] = false;
-    };
-
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
-
-    return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
-    };
-  }, [screen, status]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return undefined;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return undefined;
-
-    gameRef.current = gameRef.current || freshGame();
-
-    const drawRoundRect = (x, y, w, h, r) => {
-      const radius = clamp(r, 0, Math.min(w, h) / 2);
-      ctx.beginPath();
-      ctx.moveTo(x + radius, y);
-      ctx.arcTo(x + w, y, x + w, y + h, radius);
-      ctx.arcTo(x + w, y + h, x, y + h, radius);
-      ctx.arcTo(x, y + h, x, y, radius);
-      ctx.arcTo(x, y, x + w, y, radius);
-      ctx.closePath();
-    };
-
-    const addParticles = (x, y, type = "coin") => {
-      const g = gameRef.current;
-      for (let i = 0; i < 10; i += 1) {
-        g.particles.push({
-          x,
-          y,
-          vx: (Math.random() - 0.5) * 5,
-          vy: -Math.random() * 5 - 1,
-          life: 26,
-          type,
-        });
-      }
-    };
-
-    const update = () => {
-      const g = gameRef.current;
-      if (screen !== "game" || status !== "playing") return;
-
-      const p = g.player;
-      const jumpPressed = keysRef.current.Space || keysRef.current.ArrowUp || keysRef.current.KeyW;
-      p.ducking = Boolean(keysRef.current.ArrowDown || keysRef.current.KeyS);
-
-      if (jumpPressed && p.onGround) {
-        p.vy = -15.5;
-        p.onGround = false;
-      }
-
-      p.vy += 0.78;
-      p.y += p.vy;
-
-      const targetH = p.ducking && p.onGround ? 55 : 82;
-      const oldBottom = p.y + p.h;
-      p.h += (targetH - p.h) * 0.35;
-      p.y = oldBottom - p.h;
-
-      if (p.y + p.h >= GROUND_Y) {
-        p.y = GROUND_Y - p.h;
-        p.vy = 0;
-        p.onGround = true;
-      }
-
-      g.distance += g.speed;
-      g.speed += 0.0025;
-      g.score = Math.floor(g.distance / 8) + g.coins * 25;
-      if (g.invincible > 0) g.invincible -= 1;
-
-      g.nextObstacle -= 1;
-      if (g.nextObstacle <= 0) {
-        const type = Math.random() > 0.62 ? "copCar" : "police";
-        g.obstacles.push({
-          type,
-          x: CANVAS_WIDTH + 30,
-          y: type === "copCar" ? GROUND_Y - 48 : GROUND_Y - 74,
-          w: type === "copCar" ? 82 : 42,
-          h: type === "copCar" ? 48 : 74,
-        });
-        g.nextObstacle = Math.max(48, 80 + Math.random() * 80 - g.speed * 3);
-      }
-
-      g.nextCoin -= 1;
-      if (g.nextCoin <= 0) {
-        const arc = Math.random() > 0.45;
-        for (let i = 0; i < 5; i += 1) {
-          g.coinItems.push({
-            x: CANVAS_WIDTH + 25 + i * 34,
-            y: arc ? GROUND_Y - 130 - Math.sin((i / 4) * Math.PI) * 55 : GROUND_Y - 72,
-            w: 22,
-            h: 22,
-            spin: Math.random() * 6,
-          });
-        }
-        g.nextCoin = 95 + Math.random() * 95;
-      }
-
-      g.obstacles.forEach((o) => {
-        o.x -= g.speed + (o.type === "copCar" ? 1.8 : 0.4);
-      });
-
-      g.coinItems.forEach((c) => {
-        c.x -= g.speed;
-        c.spin += 0.2;
-      });
-
-      g.obstacles = g.obstacles.filter((o) => o.x + o.w > -30);
-      g.coinItems = g.coinItems.filter((c) => c.x + c.w > -30);
-
-      const hitBox = {
-        x: p.x + 8,
-        y: p.y + 8,
-        w: p.w - 16,
-        h: p.h - 10,
-      };
-
-      g.coinItems = g.coinItems.filter((c) => {
-        if (rectsOverlap(hitBox, c)) {
-          g.coins += 1;
-          addParticles(c.x + 10, c.y + 10, "coin");
-          return false;
-        }
-        return true;
-      });
-
-      for (const o of g.obstacles) {
-        const oBox = { x: o.x + 5, y: o.y + 5, w: o.w - 10, h: o.h - 8 };
-        if (g.invincible <= 0 && rectsOverlap(hitBox, oBox)) {
-          g.lives -= 1;
-          g.invincible = 90;
-          addParticles(p.x + 25, p.y + 35, "hit");
-          o.x -= 80;
-
-          if (g.lives <= 0) {
-            const newBest = Math.max(g.score, readBestScore());
-            writeBestScore(newBest);
-            setBest(newBest);
-            const nextBoard = addLeaderboardScore(playerName, g.score, g.coins);
-            setLeaderboard(nextBoard);
-            setSavedGameOverScore(g.score);
-            setStatus("gameover");
-          }
-          break;
-        }
-      }
-
-      g.particles.forEach((pt) => {
-        pt.x += pt.vx;
-        pt.y += pt.vy;
-        pt.vy += 0.25;
-        pt.life -= 1;
-      });
-      g.particles = g.particles.filter((pt) => pt.life > 0);
-
-      g.buildings.forEach((b) => {
-        b.x -= g.speed * 0.28;
-        if (b.x + b.w < 0) {
-          b.x = CANVAS_WIDTH + Math.random() * 120;
-          b.w = 70 + Math.random() * 45;
-          b.h = 90 + Math.random() * 190;
-          b.windows = Math.floor(4 + Math.random() * 7);
-        }
-      });
-
-      g.stars.forEach((s) => {
-        s.x -= g.speed * 0.08;
-        if (s.x < 0) s.x = CANVAS_WIDTH;
-      });
-
-      setScore(g.score);
-      setCoins(g.coins);
-      setLives(g.lives);
-    };
-
-    const drawPlayer = (g) => {
-      const p = g.player;
-      const blink = g.invincible > 0 && Math.floor(g.invincible / 6) % 2 === 0;
-      if (blink) return;
-
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.fillStyle = "#3f3f46";
-      drawRoundRect(13, p.h - 35, 13, 35, 7);
-      ctx.fill();
-      drawRoundRect(29, p.h - 35, 13, 35, 7);
-      ctx.fill();
-      ctx.fillStyle = "#f8fafc";
-      drawRoundRect(7, p.h - 10, 24, 10, 5);
-      ctx.fill();
-      drawRoundRect(27, p.h - 10, 26, 10, 5);
-      ctx.fill();
-      const hoodieY = p.ducking && p.onGround ? 15 : 24;
-      ctx.fillStyle = "#18181b";
-      drawRoundRect(3, hoodieY, 48, 38, 14);
-      ctx.fill();
-      ctx.fillStyle = "#27272a";
-      drawRoundRect(-4, hoodieY + 9, 58, 30, 15);
-      ctx.fill();
-      ctx.strokeStyle = "#facc15";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(26, hoodieY + 15, 8, 0.1, Math.PI - 0.1);
-      ctx.stroke();
-      ctx.fillStyle = "#d6a37c";
-      ctx.beginPath();
-      ctx.arc(27, 17, 16, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#111827";
-      ctx.beginPath();
-      ctx.arc(24, 12, 18, Math.PI, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#ef4444";
-      drawRoundRect(12, 0, 31, 9, 6);
-      ctx.fill();
-      ctx.fillRect(38, 4, 16, 5);
-      ctx.fillStyle = "#020617";
-      drawRoundRect(15, 15, 11, 6, 3);
-      ctx.fill();
-      drawRoundRect(29, 15, 11, 6, 3);
-      ctx.fill();
-      ctx.fillRect(25, 17, 5, 2);
-      ctx.restore();
-    };
-
-    const drawPolice = (o) => {
-      if (o.type === "copCar") {
-        ctx.fillStyle = "#1e3a8a";
-        drawRoundRect(o.x, o.y + 12, o.w, 32, 10);
-        ctx.fill();
-        ctx.fillStyle = "#0f172a";
-        drawRoundRect(o.x + 16, o.y, 42, 24, 7);
-        ctx.fill();
-        ctx.fillStyle = "#ef4444";
-        ctx.fillRect(o.x + 35, o.y - 4, 10, 6);
-        ctx.fillStyle = "#60a5fa";
-        ctx.fillRect(o.x + 46, o.y - 4, 10, 6);
-        ctx.fillStyle = "#111827";
-        ctx.beginPath(); ctx.arc(o.x + 18, o.y + 44, 9, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(o.x + 64, o.y + 44, 9, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "#f8fafc";
-        ctx.font = "bold 13px sans-serif";
-        ctx.fillText("POLICE", o.x + 17, o.y + 33);
-      } else {
-        ctx.fillStyle = "#1e40af";
-        drawRoundRect(o.x + 6, o.y + 24, 30, 45, 8);
-        ctx.fill();
-        ctx.fillStyle = "#d6a37c";
-        ctx.beginPath(); ctx.arc(o.x + 21, o.y + 15, 13, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "#172554";
-        ctx.fillRect(o.x + 9, o.y + 4, 25, 8);
-        ctx.fillStyle = "#facc15";
-        ctx.fillRect(o.x + 18, o.y + 31, 7, 7);
-        ctx.fillStyle = "#111827";
-        ctx.fillRect(o.x + 9, o.y + 67, 9, 7);
-        ctx.fillRect(o.x + 25, o.y + 67, 9, 7);
-      }
-    };
-
-    const drawCoin = (c) => {
-      ctx.save();
-      ctx.translate(c.x + 11, c.y + 11);
-      ctx.scale(Math.abs(Math.cos(c.spin)) * 0.55 + 0.35, 1);
-      ctx.fillStyle = "#facc15";
-      ctx.beginPath();
-      ctx.arc(0, 0, 11, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#f97316";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = "#fff7ed";
-      ctx.font = "bold 13px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("$", 0, 5);
-      ctx.restore();
-    };
-
-    const draw = () => {
-      const g = gameRef.current;
-      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-      const sky = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
-      sky.addColorStop(0, "#020617");
-      sky.addColorStop(0.55, "#111827");
-      sky.addColorStop(1, "#312e81");
-      ctx.fillStyle = sky;
-      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-      ctx.fillStyle = "rgba(255,255,255,0.86)";
-      ctx.beginPath(); ctx.arc(760, 72, 34, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "rgba(2,6,23,0.85)";
-      ctx.beginPath(); ctx.arc(748, 61, 31, 0, Math.PI * 2); ctx.fill();
-
-      g.stars.forEach((s) => {
-        ctx.fillStyle = "rgba(255,255,255,0.75)";
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
-      });
-
-      g.buildings.forEach((b, idx) => {
-        ctx.fillStyle = idx % 2 ? "#0f172a" : "#111827";
-        ctx.fillRect(b.x, GROUND_Y - b.h, b.w, b.h);
-        ctx.fillStyle = "rgba(250,204,21,0.72)";
-        for (let i = 0; i < b.windows; i += 1) {
-          for (let j = 0; j < 3; j += 1) {
-            if ((i + j + idx) % 3 !== 0) ctx.fillRect(b.x + 12 + j * 18, GROUND_Y - b.h + 18 + i * 24, 7, 10);
-          }
-        }
-      });
-
-      ctx.fillStyle = "#18181b";
-      ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y);
-      ctx.fillStyle = "#27272a";
-      ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 8);
-      ctx.strokeStyle = "rgba(250,204,21,0.75)";
-      ctx.lineWidth = 5;
-      ctx.setLineDash([38, 32]);
-      ctx.beginPath();
-      ctx.moveTo((-g.distance * 0.7) % 70, 458);
-      ctx.lineTo(CANVAS_WIDTH, 458);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      g.coinItems.forEach(drawCoin);
-      g.obstacles.forEach(drawPolice);
-      drawPlayer(g);
-
-      g.particles.forEach((pt) => {
-        ctx.globalAlpha = Math.max(pt.life / 26, 0);
-        ctx.fillStyle = pt.type === "coin" ? "#facc15" : "#ef4444";
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, pt.type === "coin" ? 3 : 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      });
-
-      if (status !== "playing") {
-        ctx.fillStyle = "rgba(2, 6, 23, 0.65)";
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        ctx.fillStyle = "#f8fafc";
-        ctx.textAlign = "center";
-        ctx.font = "800 42px sans-serif";
-        ctx.fillText(status === "gameover" ? "โดนจับแล้ว!" : "SWAG NIGHT RUNNER", CANVAS_WIDTH / 2, 190);
-        ctx.font = "18px sans-serif";
-        ctx.fillText("มือถือ: แตะขวาเพื่อกระโดด • แตะซ้ายค้างเพื่อหมอบ", CANVAS_WIDTH / 2, 232);
-        ctx.fillStyle = "#facc15";
-        ctx.font = "bold 22px sans-serif";
-        ctx.fillText(status === "gameover" ? `คะแนนสุดท้าย: ${savedGameOverScore ?? score}` : "เก็บเหรียญ หลบตำรวจ วิ่งให้ไกลที่สุด", CANVAS_WIDTH / 2, 268);
-      }
-    };
-
-    const loop = () => {
-      update();
-      draw();
-      animationRef.current = requestAnimationFrame(loop);
-    };
-
-    loop();
-
-    return () => {
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    };
-  }, [screen, status, score, playerName, savedGameOverScore]);
-
-  if (screen === "landing") {
-    return (
-      <div className="min-h-screen w-full overflow-hidden bg-slate-950 text-white flex items-center justify-center p-4 relative">
-        <div className="absolute inset-0 bg-hero" />
-        <div className="absolute bottom-0 left-0 right-0 h-36 bg-bottom-fade" />
-        <div className="absolute bottom-0 left-0 right-0 flex" style={{ opacity: .7 }}>
-          {Array.from({ length: 14 }).map((_, i) => (
-            <div key={i} className="mx-1 bg-slate-900 border border-slate-800" style={{ width: 80, height: 80 + ((i * 43) % 170) }} />
-          ))}
-        </div>
-
-        <motion.div initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} className="relative z-10 w-full max-w-6xl grid lg-grid-landing gap-5 items-center">
-          <Card className="rounded-game border-white-10 bg-slate-950-70 backdrop-blur-xl shadow-2xl overflow-hidden">
-            <CardContent className="p-6 sm-p-10">
-              <div className="inline-flex rounded-full border border-yellow-300-40 bg-yellow-300-10 px-4 py-2 text-xs sm-text-sm font-black text-yellow-200 mb-5">
-                NIGHT CITY • SWAG RUNNER • MOBILE READY
-              </div>
-              <h1 className="text-5xl sm-text-7xl lg-text-8xl font-black tracking-tighter leading-none text-white">
-                SWAG<br />NIGHT<br /><span className="text-yellow-300">RUNNER</span>
-              </h1>
-              <p className="mt-5 text-slate-300 text-base sm-text-lg max-w-xl">
-                วิ่งฝ่าเมืองกลางคืน เก็บเหรียญ หลบตำรวจ ทำคะแนนขึ้น Leaderboard แล้วโชว์ความ Swag ของคุณ
-              </p>
-
-              <div className="mt-6 grid grid-landing-input gap-3 max-w-xl">
-                <input
-                  value={playerName}
-                  onChange={(e) => updatePlayerName(e.target.value)}
-                  placeholder="ใส่ชื่อผู้เล่น"
-                  className="rounded-2xl bg-slate-900-90 border border-slate-700 px-5 py-4 text-white outline-none focus-yellow font-bold"
-                  maxLength={16}
-                />
-                <Button onClick={resetGame} className="rounded-2xl px-8 py-7 text-lg font-black">
-                  ▶ เข้าเล่น
-                </Button>
-              </div>
-
-              <div className="mt-5 flex flex-wrap gap-2 text-xs sm-text-sm text-slate-300">
-                <span className="rounded-full bg-slate-900-80 border border-slate-700 px-4 py-2">มือถือ: แตะขวา = กระโดด</span>
-                <span className="rounded-full bg-slate-900-80 border border-slate-700 px-4 py-2">แตะซ้ายค้าง = หมอบ</span>
-                <span className="rounded-full bg-slate-900-80 border border-slate-700 px-4 py-2">คอม: Space / ↑ / ↓</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-game border-white-10 bg-slate-950-70 backdrop-blur-xl shadow-2xl">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between gap-3 mb-4">
-                <h2 className="text-2xl font-black">🏆 Leaderboard</h2>
-                <Button onClick={clearLeaderboard} variant="outline" className="rounded-2xl px-4 py-2 font-bold">
-                  ล้างคะแนน
-                </Button>
-              </div>
-
-              <div style={{ display: "grid", gap: ".5rem" }}>
-                {leaderboard.length === 0 ? (
-                  <div className="rounded-2xl border border-slate-700 bg-slate-900-70 p-5 text-slate-300">
-                    ยังไม่มีคะแนน เริ่มเล่นแล้วขึ้นอันดับแรกเลย
-                  </div>
-                ) : (
-                  leaderboard.map((entry, index) => (
-                    <div key={entry.id} className="grid grid-leaderboard-row items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900-80 p-3">
-                      <div className="h-9 w-9 rounded-xl bg-yellow-300 text-slate-950 flex items-center justify-center font-black">{index + 1}</div>
-                      <div className="min-w-0">
-                        <p className="font-black truncate">{entry.name}</p>
-                        <p className="text-xs text-slate-400">🪙 {entry.coins} • {entry.date}</p>
-                      </div>
-                      <div className="text-xl font-black text-yellow-300">{entry.score}</div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-blue-400-30 bg-blue-400-10 p-4 text-sm text-blue-100">
-                Leaderboard นี้เก็บในเครื่องผู้เล่นก่อน ถ้าต้องการอันดับรวมออนไลน์จริง ให้ต่อ Firebase หรือ Supabase
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen w-full bg-slate-950 p-2 sm-p-4 text-white flex items-center justify-center overscroll-none touch-none select-none">
-      <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-6xl">
-        <div className="mb-3 sm-mb-4 flex flex-col gap-3 md-flex-row md-items-end md-justify-between">
-          <div>
-            <button onClick={goLanding} className="mb-2 text-xs sm-text-sm text-yellow-300 font-bold" style={{ background: "transparent", border: 0 }}>← กลับหน้าแรก</button>
-            <h1 className="text-2xl sm-text-3xl md-text-5xl font-black tracking-tight">Swag Night Runner</h1>
-            <p className="text-slate-300 mt-1 sm-mt-2 text-sm sm-text-base">Player: <b>{playerName || "SWAG PLAYER"}</b></p>
-          </div>
-
-          <div className="flex gap-2">
-            <Button onClick={resetGame} className="rounded-2xl px-5 py-5 sm-py-6 text-base font-bold">
-              <span className="mr-2" aria-hidden="true">{status === "playing" ? "↻" : "▶"}</span>
-              {status === "playing" ? "เริ่มใหม่" : "Start"}
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-score gap-2 sm-gap-3 mb-3 sm-mb-4">
-          <Card className="bg-slate-900-80 border-slate-700 rounded-2xl shadow-xl"><CardContent className="p-2 sm-p-4 flex items-center gap-2 sm-gap-3"><span className="text-xl sm-text-2xl">🚨</span><div><p className="text-xs text-slate-400">Score</p><p className="text-lg sm-text-2xl font-black text-white">{score}</p></div></CardContent></Card>
-          <Card className="bg-slate-900-80 border-slate-700 rounded-2xl shadow-xl"><CardContent className="p-2 sm-p-4 flex items-center gap-2 sm-gap-3"><span className="text-xl sm-text-2xl">🪙</span><div><p className="text-xs text-slate-400">Coins</p><p className="text-lg sm-text-2xl font-black text-white">{coins}</p></div></CardContent></Card>
-          <Card className="bg-slate-900-80 border-slate-700 rounded-2xl shadow-xl"><CardContent className="p-2 sm-p-4 flex items-center gap-2 sm-gap-3"><span className="text-xl sm-text-2xl">❤️</span><div><p className="text-xs text-slate-400">Lives</p><p className="text-lg sm-text-2xl font-black text-white">{lives}</p></div></CardContent></Card>
-          <Card className="bg-slate-900-80 border-slate-700 rounded-2xl shadow-xl"><CardContent className="p-2 sm-p-4"><p className="text-xs text-slate-400">Best</p><p className="text-lg sm-text-2xl font-black text-white">{best}</p></CardContent></Card>
-        </div>
-
-        <div className="relative rounded-game sm-rounded-game overflow-hidden border border-slate-700 shadow-2xl bg-slate-900 p-1 sm-p-2 touch-none">
-          <canvas
-            ref={canvasRef}
-            width={CANVAS_WIDTH}
-            height={CANVAS_HEIGHT}
-            onTouchStart={handleCanvasTouch}
-            onTouchMove={handleCanvasTouch}
-            onTouchEnd={handleCanvasTouchEnd}
-            onTouchCancel={handleCanvasTouchEnd}
-            className="w-full rounded-game-inner sm-rounded-game-inner bg-slate-950 touch-none"
-            aria-label="Swag Night Runner game canvas"
-          />
-          <div className="pointer-events-none absolute inset-x-2 bottom-2 flex justify-between gap-2">
-            <div className="rounded-2xl bg-slate-950-55 border border-white-20 px-4 py-2 text-xs font-bold backdrop-blur">แตะซ้ายค้าง = หมอบ</div>
-            <div className="rounded-2xl bg-slate-950-55 border border-white-20 px-4 py-2 text-xs font-bold backdrop-blur">แตะขวา = กระโดด</div>
-          </div>
-        </div>
-
-        <div className="mt-3 sm-mt-4 grid grid-mobile-controls md-grid-cols-3 gap-2 sm-gap-3 text-xs sm-text-sm text-slate-300">
-          <button type="button" onTouchStart={(e) => { e.preventDefault(); pressDuck(true); }} onTouchEnd={(e) => { e.preventDefault(); pressDuck(false); }} onTouchCancel={(e) => { e.preventDefault(); pressDuck(false); }} onMouseDown={() => pressDuck(true)} onMouseUp={() => pressDuck(false)} onMouseLeave={() => pressDuck(false)} className="rounded-2xl bg-slate-900-90 border border-slate-700 p-4 font-black active-scale transition">↓ หมอบ</button>
-          <button type="button" onTouchStart={(e) => { e.preventDefault(); pressJump(); }} onMouseDown={pressJump} className="rounded-2xl bg-yellow-400 text-slate-950 border border-yellow-200 p-4 font-black active-scale transition">↑ กระโดด</button>
-          <div className="col-span-2 md-col-span-1 rounded-2xl bg-slate-900-70 border border-slate-700 p-4">มือถือ: แตะขวาเพื่อกระโดด / แตะซ้ายค้างเพื่อหมอบ</div>
-        </div>
-      </motion.div>
+  const progress=(()=>{const g=game.current;if(!g)return 0;if(ch.type==="coins")return g.coins;if(ch.type==="score")return g.score;if(ch.type==="combo")return g.maxCombo;return g.dodges})();
+  const panel=()=>(
+    <div className="card pad">
+      <div className="tabs">{[{id:"leaderboard",label:"🏆 Rank"},{id:"daily",label:"🎯 Daily"},{id:"wardrobe",label:"🧥 Wardrobe"},{id:"settings",label:"⚙️ Login"}].map(t=><button key={t.id} onClick={()=>setActive(t.id)} className={`tab ${active===t.id?"active":""}`}>{t.label}</button>)}</div>
+      {active==="leaderboard"&&<div><div className="row" style={{justifyContent:"space-between",marginBottom:12}}><div><h2>🏆 {user?"Online Leaderboard":"Local Leaderboard"}</h2><p className="muted">{user?"อันดับรวมออนไลน์":"คะแนนในเครื่องนี้"}</p></div><Button variant="outline" disabled={locked||!!user} onClick={clearBoard}>ล้าง</Button></div>{leaderboard.length===0?<div className="notice">ยังไม่มีคะแนน</div>:leaderboard.map((e,i)=><div key={e.id} className="rank"><div className="badge">{i+1}</div><div><b>{e.name}</b><div className="muted">🪙 {e.coins} • x{e.maxCombo||1} • Style {e.styleScore||0}</div></div><b style={{color:"#fde047",fontSize:22}}>{e.score}</b></div>)}</div>}
+      {active==="daily"&&<div><h2>🎯 {ch.title}</h2><p className="muted">{ch.desc}</p><div className="notice"><div style={{height:14,borderRadius:999,background:"#020617",overflow:"hidden"}}><div style={{height:"100%",width:`${clamp(progress/ch.target*100,0,100)}%`,background:"#facc15"}}/></div><p>Progress: {Math.min(progress,ch.target)} / {ch.target}</p><p className="muted">Reward +{ch.reward} coins</p></div></div>}
+      {active==="wardrobe"&&<div><div className="row" style={{justifyContent:"space-between"}}><div><h2>🧥 Wardrobe</h2><p className="muted">เปลี่ยนทรงผม เสื้อ กางเกง รองเท้า และเอฟเฟกต์จริง</p></div><b style={{color:"#fde047"}}>Wallet 🪙 {walletCoins}</b></div>{locked&&<div className="notice">🔒 กำลังเล่นอยู่: เปลี่ยนได้หลังจบรอบ</div>}{[["hairs","Hair"],["tops","Top"],["pants","Pants"],["shoes","Shoes"]].map(([cat,title])=><div key={cat} style={{marginTop:16}}><b>{title}</b><div className="grid2">{PARTS[cat].map(item=>{const key={hairs:"hair",tops:"top",pants:"pants",shoes:"shoes"}[cat],on=normLoadout(loadout)[key]===item.id,un=unlockedParts[cat]?.includes(item.id),prev=cat==="hairs"?`linear-gradient(90deg,${item.hair},${item.cap||item.hair})`:cat==="tops"?`linear-gradient(90deg,${item.main},${item.accent||item.sleeve||item.inner||item.detail})`:cat==="pants"?`linear-gradient(90deg,${item.main},${item.detail})`:`linear-gradient(90deg,${item.main},${item.sole})`;return <button disabled={locked} onClick={()=>equipPart(cat,item)} className={`item ${on?"on":""}`} key={item.id}><div className="swatch" style={{background:prev}}/><b>{item.name}</b><div className="muted">{un?(on?"Equipped":"Tap to equip"):`Unlock ${item.price}`}</div></button>})}</div></div>)}<div style={{marginTop:16}}><b>Skin Effect</b><div className="grid2">{EFFECTS.map(e=><button key={e.id} disabled={locked} onClick={()=>equipEffect(e.id)} className={`item ${skin===e.id?"on":""}`}><div className="swatch" style={{background:`radial-gradient(circle,${e.accent},${e.glow},rgba(15,23,42,.85))`}}/><b>{e.name}</b><div className="muted">{unlockedEffects.includes(e.id)?(skin===e.id?"Equipped":"Tap to equip"):`Unlock ${e.price}`}</div></button>)}</div></div></div>}
+      {active==="settings"&&<div><h2>⚙️ Settings & Login</h2><p className="muted">Login เพื่อ save coins, best score, wardrobe และ leaderboard ออนไลน์</p><div className="notice"><div className="row" style={{justifyContent:"space-between"}}><div><b>☁️ Cloud Save</b><p className="muted">{authStatus}</p></div>{user?<Button variant="outline" disabled={locked||cloudLoading} onClick={logout}>Logout</Button>:<span className="pill">Guest</span>}</div>{!user&&<div className="authgrid"><input className="input" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email"/><input className="input" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password 6+" type="password"/><Button disabled={locked||cloudLoading} onClick={()=>handleEmailAuth("signin")}>Login</Button><Button variant="outline" disabled={locked||cloudLoading} onClick={()=>handleEmailAuth("signup")}>Sign up</Button></div>}</div><div className="grid4" style={{marginTop:12}}><Button variant="outline" disabled={locked} onClick={cycleQuality}>Quality: {quality.toUpperCase()}</Button><div className="notice">มือถือ: ขวา=กระโดด / ซ้ายค้าง=หมอบ</div><div className="notice">คอม: Space/↑ กระโดด ↓ หมอบ</div><div className="notice">SS ต้อง 100,000+</div></div></div>}
     </div>
   );
+
+  if(screen==="landing")return <div className="app"><div className="shell landing"><motion.div className="card hero" initial={{opacity:0,y:18}} animate={{opacity:1,y:0}}><div className="pill">COMBO • POWER-UP • POLICE CHASE • CLOUD SAVE</div><h1 className="title">SWAG<br/>NIGHT<br/><span>RUNNER</span></h1><p className="sub">วิ่งฝ่าเมืองกลางคืน เก็บเหรียญ ต่อ Combo ใช้ Power-up หลบตำรวจ แล้ว save คะแนน/ชุดแต่งตัวด้วย Supabase Login</p><div className="formrow"><input className="input" value={playerName} onChange={e=>updateName(e.target.value)} maxLength={16}/><Button onClick={reset}>▶ เข้าเล่น</Button></div><div className="grid4" style={{marginTop:12}}><div className="notice">🔥 Combo เพิ่มตัวคูณ</div><div className="notice">🛡️ 🧲 ⚡ Power-up</div><div className="notice">🚨 Police Chase</div><div className="notice">☁️ Cloud Save</div></div></motion.div><motion.div initial={{opacity:0,y:18}} animate={{opacity:1,y:0}}>{panel()}</motion.div></div></div>;
+
+  return <div className="app"><div className="shell"><div className="row" style={{justifyContent:"space-between",alignItems:"flex-end"}}><div>{status==="gameover"?<button className="btn ghost" onClick={goLanding}>← กลับหน้าแรก</button>:<div className="muted">กำลังวิ่งอยู่ • จบเกมแล้วถึงกลับหน้าแรกได้</div>}<h1 style={{margin:"6px 0 0",fontSize:"clamp(28px,5vw,52px)"}}>Swag Night Runner</h1><div className="muted">Player: <b>{playerName}</b> • {toast}</div></div><Button onClick={reset}>{status==="playing"?"↻ เริ่มใหม่":"▶ Start"}</Button></div><div className="stats">{[["Score",score],["Coins",`🪙 ${coins}`],["Lives",`❤️ ${lives}`],["Best",bestScore],["Combo",`x${combo}`],["Max",`x${maxCombo}`],["Style",styleScore],["Wallet",walletCoins]].map(([a,b])=><div className="stat" key={a}><small>{a}</small><b>{b}</b></div>)}</div><div className="canvaswrap"><canvas ref={canvasRef} width={W} height={H} onTouchStart={e=>{e.preventDefault();const t=e.changedTouches[0],r=e.currentTarget.getBoundingClientRect();if(t.clientX-r.left<r.width*.42)pressDuck(true);else pressJump()}} onTouchMove={e=>e.preventDefault()} onTouchEnd={e=>{e.preventDefault();pressDuck(false)}}/><div className="mobilehint"><span>แตะซ้ายค้าง = หมอบ</span><span>แตะขวา = กระโดด</span></div></div>{status==="gameover"&&<div className="result"><div className="card pad"><div className="muted">RESULT</div><div className="grade">Rank {grade(finalScore,maxCombo,styleScore)}</div><p>Score <b>{finalScore}</b> • Max Combo <b>x{maxCombo}</b></p><p>Style <b>{styleScore}</b> • Earned <b>+{coins}</b></p><p className="muted">Wallet รวมตอนนี้ <b>{walletCoins}</b></p><div className="row"><Button onClick={reset}>เล่นอีกครั้ง</Button><Button variant="outline" onClick={goLanding}>กลับหน้าแรก</Button></div></div>{panel()}</div>}{status!=="gameover"&&<div className="panel">{panel()}</div>}<div className="grid4" style={{marginTop:12}}><button className="btn dark" onTouchStart={e=>{e.preventDefault();pressDuck(true)}} onTouchEnd={e=>{e.preventDefault();pressDuck(false)}} onMouseDown={()=>pressDuck(true)} onMouseUp={()=>pressDuck(false)}>↓ หมอบ</button><button className="btn" onTouchStart={e=>{e.preventDefault();pressJump()}} onMouseDown={pressJump}>↑ กระโดด</button><button className="btn dark" disabled={locked} onClick={cycleQuality}>⚙️ Quality: {quality.toUpperCase()}</button><div className="notice">🛡️ Shield กันชน • หลบเฉียด = Style</div></div></div></div>;
 }
