@@ -202,3 +202,12 @@ Run SUPABASE-V5-SQL.sql in Supabase SQL Editor.
 - Added foot burst feedback for normal jump, double jump, and landing.
 - Added small style/combo reward for successful double jump.
 - No new Supabase SQL is required.
+
+## v5.6 Fast Fall + Slide Control
+- Holding Slide/Duck while airborne now triggers Fast Fall.
+- Fast Fall makes the character drop faster instead of floating too long.
+- If Slide is still held when landing, the character continues into slide posture.
+- Added FAST FALL / QUICK LAND feedback.
+- Added small style/combo reward for controlled quick landing.
+- Added subtle downward speed streaks during fast fall.
+- No new Supabase SQL is required.
