@@ -71,3 +71,18 @@ Environment variables must already exist:
 - Added Login to Play messaging.
 - Added password show/hide toggle.
 - Added account status card, My Profile, Sync Profile, and Logout area after login.
+
+## v4.5 Username Account Update
+- Username is set once during Sign up.
+- Landing page no longer asks for player name every time.
+- Username availability is checked before account creation.
+- Username can be changed only in My Profile.
+- Changing Username costs 10,000 coins.
+- Bio and Avatar edits remain free.
+
+## v4.6 Realtime Username Check
+- Sign up username is checked automatically while typing.
+- Uses 500ms debounce to avoid too many Supabase requests.
+- Username input turns green when available.
+- Username input turns red when invalid or already taken.
+- Create Account button is disabled until username is available.
