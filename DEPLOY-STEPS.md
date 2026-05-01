@@ -239,3 +239,11 @@ Run SUPABASE-V5-SQL.sql in Supabase SQL Editor.
 - Pinned dependency versions instead of using `latest`.
 - This reduces Vercel npm install failures such as `Exit handler never called`.
 - If Vercel still fails at Installing dependencies, redeploy once with cache disabled.
+
+## v5.7.1 Vercel Install Command Fix
+- Added `vercel.json` to force Vercel to use:
+  `npm ci --no-audit --no-fund --prefer-online`
+- Added `.npmrc` to reduce npm install instability.
+- Keep `package-lock.json` in the repository root.
+- If Vercel still shows `npm install`, go to Project Settings → Build & Development Settings → Install Command and set:
+  `npm ci --no-audit --no-fund --prefer-online`
