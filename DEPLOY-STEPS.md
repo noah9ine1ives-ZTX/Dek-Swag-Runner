@@ -169,3 +169,13 @@ Run SUPABASE-V5-SQL.sql in Supabase SQL Editor.
   - Trail Effect
 - Players can visually understand each item before preview/buy/equip.
 - No new Supabase SQL is required for this version if `SUPABASE-V5-SQL.sql` was already run.
+
+## v5.2 Male / Female Character Preview
+- Added Male Runner / Female Runner selector in Style Preview.
+- Body type preview is free and can be equipped through Buy / Equip Preview.
+- Prepared preview rendering for male/female visual differences.
+- Fixed Style Preview text overlap:
+  - Outfit text is now below the character canvas.
+  - Long item names are clipped safely.
+  - Character outfit is no longer blocked by text.
+- No new Supabase SQL is required if `SUPABASE-V5-SQL.sql` was already run.
