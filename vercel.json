@@ -1,6 +1,6 @@
 {
-  "installCommand": "npm ci --no-audit --no-fund --prefer-online",
-  "buildCommand": "npm run build",
+  "installCommand": "corepack enable && corepack prepare pnpm@9.15.9 --activate && pnpm install --no-frozen-lockfile",
+  "buildCommand": "corepack enable && corepack prepare pnpm@9.15.9 --activate && pnpm run build",
   "outputDirectory": "dist",
   "framework": "vite"
 }
