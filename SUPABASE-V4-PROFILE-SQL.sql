@@ -258,3 +258,123 @@ end $$;
 --
 -- To remove dev:
 -- update public.profiles set role = 'player' where username = 'DEV';
+
+
+
+-- SWAG NIGHT RUNNER v4.8 DEV DASHBOARD
+-- Safer dev helper function used by RLS policies.
+create or replace function public.is_dev(uid uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where id = uid and role = 'dev'
+  );
+$$;
+
+grant execute on function public.is_dev(uuid) to authenticated;
+
+-- Dev audit log.
+create table if not exists public.dev_audit_log (
+  id bigserial primary key,
+  dev_id uuid references auth.users(id) on delete set null,
+  target_id uuid references auth.users(id) on delete set null,
+  action text not null,
+  details jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.dev_audit_log enable row level security;
+
+drop policy if exists "Devs can insert audit logs" on public.dev_audit_log;
+create policy "Devs can insert audit logs"
+on public.dev_audit_log for insert
+to authenticated
+with check (public.is_dev(auth.uid()));
+
+drop policy if exists "Devs can read audit logs" on public.dev_audit_log;
+create policy "Devs can read audit logs"
+on public.dev_audit_log for select
+to authenticated
+using (public.is_dev(auth.uid()));
+
+-- Dev can update public profile data for moderation/economy tools.
+drop policy if exists "Devs can update any profile" on public.profiles;
+create policy "Devs can update any profile"
+on public.profiles for update
+to authenticated
+using (public.is_dev(auth.uid()))
+with check (public.is_dev(auth.uid()));
+
+-- Dev can manage suspicious leaderboard rows.
+drop policy if exists "Devs can update leaderboard" on public.leaderboard;
+create policy "Devs can update leaderboard"
+on public.leaderboard for update
+to authenticated
+using (public.is_dev(auth.uid()))
+with check (public.is_dev(auth.uid()));
+
+drop policy if exists "Devs can delete leaderboard rows" on public.leaderboard;
+create policy "Devs can delete leaderboard rows"
+on public.leaderboard for delete
+to authenticated
+using (public.is_dev(auth.uid()));
+
+-- Dev can update player inventory/loadout if future tools need it.
+drop policy if exists "Devs can update any player inventory" on public.player_inventory;
+create policy "Devs can update any player inventory"
+on public.player_inventory for update
+to authenticated
+using (public.is_dev(auth.uid()))
+with check (public.is_dev(auth.uid()));
+
+drop policy if exists "Devs can update any player loadout" on public.player_loadouts;
+create policy "Devs can update any player loadout"
+on public.player_loadouts for update
+to authenticated
+using (public.is_dev(auth.uid()))
+with check (public.is_dev(auth.uid()));
+
+
+
+-- SWAG NIGHT RUNNER v4.9 MODERATION SYSTEM
+alter table public.profiles
+add column if not exists account_status text not null default 'active';
+
+alter table public.profiles
+add column if not exists suspended_until timestamptz;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'profiles_account_status_chk'
+  ) then
+    alter table public.profiles
+    add constraint profiles_account_status_chk
+    check (account_status in ('active','suspended','banned'))
+    not valid;
+  end if;
+end $$;
+
+create index if not exists profiles_account_status_idx
+on public.profiles (account_status);
+
+create index if not exists profiles_suspended_until_idx
+on public.profiles (suspended_until);
+
+-- Dev can upsert target inventory/loadout for Give/Remove Item and Reset Wardrobe tools.
+drop policy if exists "Devs can insert any player inventory" on public.player_inventory;
+create policy "Devs can insert any player inventory"
+on public.player_inventory for insert
+to authenticated
+with check (public.is_dev(auth.uid()));
+
+drop policy if exists "Devs can insert any player loadout" on public.player_loadouts;
+create policy "Devs can insert any player loadout"
+on public.player_loadouts for insert
+to authenticated
+with check (public.is_dev(auth.uid()));

@@ -18,3 +18,7 @@
 .username-status.checking{color:#fde68a}
 
 .dev-panel{margin-top:12px;border:1px solid rgba(236,72,153,.35);background:radial-gradient(circle at 12% 0%,rgba(236,72,153,.16),transparent 38%),rgba(15,23,42,.72);border-radius:24px;padding:16px}.dev-panel h3{margin:0;font-size:24px}.dev-panel label{display:block;margin-bottom:6px;font-size:12px;font-weight:1000;color:#fbcfe8}
+
+.dev-section{margin-top:14px;border:1px solid rgba(255,255,255,.1);background:rgba(2,6,23,.38);border-radius:20px;padding:14px}.dev-section h4{margin:0 0 8px;font-size:18px}.dev-target{margin-top:12px;border:1px solid rgba(250,204,21,.2);background:rgba(15,23,42,.62);border-radius:22px;padding:14px}.dev-target select.input{appearance:auto}
+
+.audit-row{border:1px solid rgba(255,255,255,.1);background:rgba(2,6,23,.5);border-radius:14px;padding:10px;margin-top:8px}.audit-row b{display:block;color:#fde047}.audit-row span{display:block;color:#94a3b8;font-size:12px;margin:4px 0}.audit-row pre{white-space:pre-wrap;word-break:break-word;background:rgba(15,23,42,.75);border-radius:10px;padding:8px;margin:6px 0 0;color:#cbd5e1;font-size:11px;max-height:140px;overflow:auto}.dev-panel .textarea{min-height:74px}

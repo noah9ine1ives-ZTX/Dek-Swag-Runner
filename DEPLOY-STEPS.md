@@ -102,3 +102,30 @@ update public.profiles
 set role = 'dev'
 where username = 'YOUR_USERNAME';
 ```
+
+## v4.8 Dev Dashboard
+Adds advanced dev tools:
+- Search player by Username or Friend Code.
+- View player profile summary.
+- Set target player coins.
+- Add coins to target player.
+- Remove target player's leaderboard score.
+- Set target role: player/dev.
+- Reset target avatar/bio.
+- View target profile.
+- Audit log table: `dev_audit_log`.
+
+Run `SUPABASE-V4-PROFILE-SQL.sql` again after deploying this version.
+
+## v4.9 Moderation System
+Adds advanced player moderation:
+1. Ban / Unban players.
+2. Suspend players for a chosen number of days.
+3. Reset Score Full: leaderboard + profile best_score/best_combo/best_style.
+4. Reset Wardrobe to defaults.
+5. Give Item / Remove Item for Hair, Top, Pants, Shoes, Effect.
+6. Reset Avatar/Bio with reason.
+7. Reason Required for important dev actions.
+8. Audit Log Viewer in-game.
+
+Run `SUPABASE-V4-PROFILE-SQL.sql` again after deploying.

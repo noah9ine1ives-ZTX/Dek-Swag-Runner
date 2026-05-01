@@ -69,7 +69,7 @@ export default function SwagRunnerNightCityGame(){
  const[skin,setSkin]=useState("classic"),[unlockedEffects,setUnlockedEffects]=useState(["classic"]),[quality,setQuality]=useState("auto"),[loadout,setLoadout]=useState(DEFAULT_LOADOUT),[unlockedParts,setUnlockedParts]=useState(DEFAULT_PARTS),[previewLoadout,setPreviewLoadout]=useState(DEFAULT_LOADOUT),[previewSkin,setPreviewSkin]=useState("classic"),[previewItem,setPreviewItem]=useState(null);
  const[active,setActive]=useState("leaderboard"),[savedScore,setSavedScore]=useState(null),[toast,setToast]=useState("Ready"),[email,setEmail]=useState(""),[password,setPassword]=useState(""),[user,setUser]=useState(null),[authStatus,setAuthStatus]=useState(supabase?"Guest mode":"Supabase env ยังไม่พร้อม"),[cloudLoading,setCloudLoading]=useState(false);
  const[friendSearch,setFriendSearch]=useState(""),[friends,setFriends]=useState([]),[incoming,setIncoming]=useState([]),[outgoing,setOutgoing]=useState([]),[friendCode,setFriendCode]=useState("");
- const[profileModal,setProfileModal]=useState(null),[profileBio,setProfileBio]=useState(""),[profileUsername,setProfileUsername]=useState(""),[avatarUploading,setAvatarUploading]=useState(false),[userRole,setUserRole]=useState("player"),[devCoins,setDevCoins]=useState("10000");
+ const[profileModal,setProfileModal]=useState(null),[profileBio,setProfileBio]=useState(""),[profileUsername,setProfileUsername]=useState(""),[avatarUploading,setAvatarUploading]=useState(false),[userRole,setUserRole]=useState("player"),[accountStatus,setAccountStatus]=useState("active"),[suspendedUntil,setSuspendedUntil]=useState(null),[devCoins,setDevCoins]=useState("10000"),[devLookup,setDevLookup]=useState(""),[devTarget,setDevTarget]=useState(null),[devTargetCoins,setDevTargetCoins]=useState("0"),[devTargetRole,setDevTargetRole]=useState("player"),[devBusy,setDevBusy]=useState(false),[devReason,setDevReason]=useState(""),[devSuspendDays,setDevSuspendDays]=useState("7"),[devItemCat,setDevItemCat]=useState("hairs"),[devItemId,setDevItemId]=useState("cap-fade"),[devLogs,setDevLogs]=useState([]);
  const[showPassword,setShowPassword]=useState(false),[signupUsername,setSignupUsername]=useState(""),[usernameStatus,setUsernameStatus]=useState("ตั้ง Username ตอนสมัครครั้งแรก"),[usernameStatusType,setUsernameStatusType]=useState("idle");
  const ch=daily(),locked=status==="playing",finalScore=savedScore??score;
  useEffect(()=>{state.current={...state.current,screen,status,playerName,skin,quality,loadout,saved:savedScore}},[screen,status,playerName,skin,quality,loadout,savedScore]);
@@ -87,7 +87,7 @@ export default function SwagRunnerNightCityGame(){
  await supabase.from("player_loadouts").upsert({user_id:u.id,...DEFAULT_LOADOUT,skin_effect:"classic",updated_at:new Date().toISOString()},{onConflict:"user_id",ignoreDuplicates:true});
 }
  async function touchPresence(){if(supabase&&user)await supabase.from("profiles").update({last_seen:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",user.id)}
- async function loadCloudPlayer(u){if(!supabase||!u)return;setCloudLoading(true);setAuthStatus("กำลังโหลดข้อมูลผู้เล่น...");try{await ensureCloudDefaults(u);const[{data:p},{data:inv},{data:lo},{data:lb}]=await Promise.all([supabase.from("profiles").select("username,coins,best_score,best_combo,best_style,last_seen,friend_code,bio,avatar_url,role").eq("id",u.id).maybeSingle(),supabase.from("player_inventory").select("hairs,tops,pants,shoes,effects").eq("user_id",u.id).maybeSingle(),supabase.from("player_loadouts").select("hair,top,pants,shoes,skin_effect").eq("user_id",u.id).maybeSingle(),supabase.from("leaderboard").select("user_id,username,score,coins,max_combo,style_score,updated_at,profile:profiles!leaderboard_user_id_fkey(avatar_url,bio,friend_code,last_seen)").order("score",{ascending:false}).limit(50)]);if(p?.username)updateName(p.username.slice(0,16));if(p?.friend_code)setFriendCode(p.friend_code);setProfileBio(p?.bio||"");setProfileUsername(p?.username||usernameFromUser(u));setUserRole(p?.role||"player");if(Number.isFinite(Number(p?.coins))){setWalletCoins(p.coins);set(LS.wallet,String(p.coins))}if(Number.isFinite(Number(p?.best_score))){setBestScore(p.best_score);set(LS.best,String(p.best_score))}if(inv){const np=normParts(inv);setUnlockedParts(np);set(LS.parts,JSON.stringify(np));const ef=Array.from(new Set(["classic",...(Array.isArray(inv.effects)?inv.effects:[])]));setUnlockedEffects(ef);set(LS.unlocked,JSON.stringify(ef))}if(lo){const nl=normLoadout(lo),ef=EFFECTS.some(e=>e.id===lo.skin_effect)?lo.skin_effect:"classic";setLoadout(nl);setPreviewLoadout(nl);setSkin(ef);setPreviewSkin(ef);state.current={...state.current,loadout:nl,skin:ef};set(LS.loadout,JSON.stringify(nl));set(LS.skin,ef)}if(Array.isArray(lb)){const out=lb.map(r=>({id:r.user_id,name:r.username,score:r.score,coins:r.coins,maxCombo:r.max_combo,styleScore:r.style_score,date:new Date(r.updated_at).toLocaleDateString("th-TH"),avatar_url:r.profile?.avatar_url||""}));setLeaderboard(out);saveBoard(out)}setAuthStatus(`Online save พร้อมใช้งาน: ${u.email}`);await loadFriendsData(u.id)}catch(e){console.error(e);setAuthStatus(`โหลดข้อมูลออนไลน์ไม่สำเร็จ: ${e.message}`)}finally{setCloudLoading(false)}}
+ async function loadCloudPlayer(u){if(!supabase||!u)return;setCloudLoading(true);setAuthStatus("กำลังโหลดข้อมูลผู้เล่น...");try{await ensureCloudDefaults(u);const[{data:p},{data:inv},{data:lo},{data:lb}]=await Promise.all([supabase.from("profiles").select("username,coins,best_score,best_combo,best_style,last_seen,friend_code,bio,avatar_url,role,account_status,suspended_until").eq("id",u.id).maybeSingle(),supabase.from("player_inventory").select("hairs,tops,pants,shoes,effects").eq("user_id",u.id).maybeSingle(),supabase.from("player_loadouts").select("hair,top,pants,shoes,skin_effect").eq("user_id",u.id).maybeSingle(),supabase.from("leaderboard").select("user_id,username,score,coins,max_combo,style_score,updated_at,profile:profiles!leaderboard_user_id_fkey(avatar_url,bio,friend_code,last_seen)").order("score",{ascending:false}).limit(50)]);if(p?.username)updateName(p.username.slice(0,16));if(p?.friend_code)setFriendCode(p.friend_code);setProfileBio(p?.bio||"");setProfileUsername(p?.username||usernameFromUser(u));setUserRole(p?.role||"player");setAccountStatus(p?.account_status||"active");setSuspendedUntil(p?.suspended_until||null);if(Number.isFinite(Number(p?.coins))){setWalletCoins(p.coins);set(LS.wallet,String(p.coins))}if(Number.isFinite(Number(p?.best_score))){setBestScore(p.best_score);set(LS.best,String(p.best_score))}if(inv){const np=normParts(inv);setUnlockedParts(np);set(LS.parts,JSON.stringify(np));const ef=Array.from(new Set(["classic",...(Array.isArray(inv.effects)?inv.effects:[])]));setUnlockedEffects(ef);set(LS.unlocked,JSON.stringify(ef))}if(lo){const nl=normLoadout(lo),ef=EFFECTS.some(e=>e.id===lo.skin_effect)?lo.skin_effect:"classic";setLoadout(nl);setPreviewLoadout(nl);setSkin(ef);setPreviewSkin(ef);state.current={...state.current,loadout:nl,skin:ef};set(LS.loadout,JSON.stringify(nl));set(LS.skin,ef)}if(Array.isArray(lb)){const out=lb.map(r=>({id:r.user_id,name:r.username,score:r.score,coins:r.coins,maxCombo:r.max_combo,styleScore:r.style_score,date:new Date(r.updated_at).toLocaleDateString("th-TH"),avatar_url:r.profile?.avatar_url||""}));setLeaderboard(out);saveBoard(out)}setAuthStatus(`Online save พร้อมใช้งาน: ${u.email}`);await loadFriendsData(u.id);setTimeout(()=>devRefreshLogs?.(),300)}catch(e){console.error(e);setAuthStatus(`โหลดข้อมูลออนไลน์ไม่สำเร็จ: ${e.message}`)}finally{setCloudLoading(false)}}
  
  async function checkSignupUsername(value=signupUsername){
   const username=cleanUsername(value);
@@ -143,10 +143,11 @@ export default function SwagRunnerNightCityGame(){
  }catch(e){console.error(e);setAuthStatus(e.message||"เข้าสู่ระบบไม่สำเร็จ")}
  finally{setCloudLoading(false)}
 }
- async function logout(){if(locked)return lockToast();if(!supabase)return;await supabase.auth.signOut();setUser(null);setAuthStatus("ออกจากระบบแล้ว: Guest mode");setFriends([]);setIncoming([]);setOutgoing([]);setFriendsLeaderboard([]);setUserRole("player")}
+ async function logout(){if(locked)return lockToast();if(!supabase)return;await supabase.auth.signOut();setUser(null);setAuthStatus("ออกจากระบบแล้ว: Guest mode");setFriends([]);setIncoming([]);setOutgoing([]);setFriendsLeaderboard([]);setUserRole("player");setAccountStatus("active");setSuspendedUntil(null)}
  async function saveCloudLoadout(nl=loadout,ns=skin,np=unlockedParts,ne=unlockedEffects){if(!supabase||!user)return;try{await Promise.all([supabase.from("player_loadouts").upsert({user_id:user.id,...normLoadout(nl),skin_effect:ns,updated_at:new Date().toISOString()},{onConflict:"user_id"}),supabase.from("player_inventory").upsert({user_id:user.id,...normParts(np),effects:Array.from(new Set(["classic",...ne])),updated_at:new Date().toISOString()},{onConflict:"user_id"})]);setAuthStatus("บันทึก Wardrobe ออนไลน์แล้ว")}catch(e){console.error(e);setAuthStatus(`Save Wardrobe ไม่สำเร็จ: ${e.message}`)}}
  async function saveCloudResult(fs,fc,fm,fst){
  if(!supabase||!user)return;
+ if(accountStatus==="banned"||(accountStatus==="suspended"&&suspendedUntil&&new Date(suspendedUntil)>new Date()))return;
  try{
   const username=await createUniqueUsername(cleanUsername(playerName||usernameFromUser())||"SWAGPLAYER",user.id);
   if(username!==playerName)updateName(username);
@@ -267,11 +268,25 @@ export default function SwagRunnerNightCityGame(){
 
  
  function requireLoginToPlay(){
-  if(user)return true;
-  setActive("settings");
-  setScreen("landing");
-  setToast("กรุณา Login หรือ Sign up ก่อนเข้าเล่น เพื่อบันทึกคะแนน โปรไฟล์ และอันดับออนไลน์");
-  return false;
+  if(!user){
+   setActive("settings");
+   setScreen("landing");
+   setToast("กรุณา Login หรือ Sign up ก่อนเข้าเล่น เพื่อบันทึกคะแนน โปรไฟล์ และอันดับออนไลน์");
+   return false;
+  }
+  if(accountStatus==="banned"){
+   setActive("settings");
+   setScreen("landing");
+   setToast("บัญชีนี้ถูก Ban และไม่สามารถเล่นได้");
+   return false;
+  }
+  if(accountStatus==="suspended"&&suspendedUntil&&new Date(suspendedUntil)>new Date()){
+   setActive("settings");
+   setScreen("landing");
+   setToast(`บัญชีถูก Suspend ถึง ${new Date(suspendedUntil).toLocaleString("th-TH")}`);
+   return false;
+  }
+  return true;
  }
 
  
@@ -316,6 +331,215 @@ export default function SwagRunnerNightCityGame(){
   ]);
   await loadGlobalLeaderboard();await loadFriendsLeaderboard();
   setToast("DEV: reset only your own test data");
+ }
+
+ 
+ async function devAudit(action,targetId,details={}){
+  if(!supabase||!user||!isDev)return;
+  try{
+   await supabase.from("dev_audit_log").insert({
+    dev_id:user.id,
+    target_id:targetId||null,
+    action,
+    details,
+    created_at:new Date().toISOString()
+   });
+  }catch(e){console.error("audit failed",e)}
+ }
+ async function devLookupPlayer(){
+  if(!supabase||!user||!isDev)return setToast("Dev only");
+  const q=devLookup.trim();
+  if(!q)return setToast("กรอก Username หรือ Friend Code ก่อน");
+  setDevBusy(true);
+  try{
+   const normalized=q.toUpperCase();
+   let {data:p,error}=await supabase.from("profiles").select("id,username,friend_code,role,account_status,suspended_until,coins,best_score,best_combo,best_style,bio,avatar_url,last_seen,created_at,updated_at").eq("friend_code",normalized).maybeSingle();
+   if(error)throw error;
+   if(!p){
+    const res=await supabase.from("profiles").select("id,username,friend_code,role,account_status,suspended_until,coins,best_score,best_combo,best_style,bio,avatar_url,last_seen,created_at,updated_at").ilike("username",q).maybeSingle();
+    if(res.error)throw res.error;
+    p=res.data;
+   }
+   if(!p){setDevTarget(null);return setToast("ไม่พบผู้เล่นนี้")}
+   setDevTarget(p);
+   setDevTargetCoins(String(p.coins||0));
+   setDevTargetRole(p.role||"player");
+   setToast(`DEV: found ${p.username}`);
+  }catch(e){console.error(e);setToast(`ค้นหาผู้เล่นไม่สำเร็จ: ${e.message}`)}
+  finally{setDevBusy(false)}
+ }
+
+ async function devSetTargetCoins(){
+  if(!supabase||!user||!isDev||!devTarget)return setToast("Dev only");
+  if(!requireDevReason("set coins"))return;
+  const coins=Math.max(0,Math.floor(num(devTargetCoins,0)));
+  if(!confirm(`Set ${devTarget.username} coins to ${coins}?`))return;
+  setDevBusy(true);
+  try{
+   await supabase.from("profiles").update({coins,updated_at:new Date().toISOString()}).eq("id",devTarget.id);
+   await devAudit("set_coins",devTarget.id,{reason:devReason,old:devTarget.coins,new:coins});
+   setDevTarget({...devTarget,coins});
+   setToast(`DEV: set coins for ${devTarget.username}`);
+  }catch(e){console.error(e);setToast(`Set coins failed: ${e.message}`)}
+  finally{setDevBusy(false)}
+ }
+ async function devAddTargetCoins(){
+  if(!supabase||!user||!isDev||!devTarget)return setToast("Dev only");
+  if(!requireDevReason("add coins"))return;
+  const add=Math.floor(num(devCoins,0));
+  const coins=Math.max(0,Math.floor(num(devTarget.coins,0)+add));
+  if(!confirm(`Add ${add} coins to ${devTarget.username}?`))return;
+  setDevBusy(true);
+  try{
+   await supabase.from("profiles").update({coins,updated_at:new Date().toISOString()}).eq("id",devTarget.id);
+   await devAudit("add_coins",devTarget.id,{reason:devReason,add,new:coins});
+   setDevTarget({...devTarget,coins});
+   setDevTargetCoins(String(coins));
+   setToast(`DEV: added coins to ${devTarget.username}`);
+  }catch(e){console.error(e);setToast(`Add coins failed: ${e.message}`)}
+  finally{setDevBusy(false)}
+ }
+ async function devSetTargetRoleNow(){
+  if(!supabase||!user||!isDev||!devTarget)return setToast("Dev only");
+  if(!requireDevReason("set role"))return;
+  if(!["player","dev"].includes(devTargetRole))return setToast("Invalid role,account_status,suspended_until");
+  if(!confirm(`Set ${devTarget.username} role to ${devTargetRole}?`))return;
+  setDevBusy(true);
+  try{
+   await supabase.from("profiles").update({role:devTargetRole,updated_at:new Date().toISOString()}).eq("id",devTarget.id);
+   await devAudit("set_role",devTarget.id,{reason:devReason,old:devTarget.role,new:devTargetRole});
+   setDevTarget({...devTarget,role:devTargetRole});
+   setToast(`DEV: role updated`);
+  }catch(e){console.error(e);setToast(`Set role failed: ${e.message}`)}
+  finally{setDevBusy(false)}
+ }
+ async function devRemoveTargetScore(){
+  if(!supabase||!user||!isDev||!devTarget)return setToast("Dev only");
+  if(!requireDevReason("remove leaderboard score"))return;
+  if(!confirm(`Remove ${devTarget.username} from leaderboard?`))return;
+  setDevBusy(true);
+  try{
+   await supabase.from("leaderboard").delete().eq("user_id",devTarget.id);
+   await devAudit("remove_leaderboard_score",devTarget.id,{reason:devReason,username:devTarget.username});
+   await loadGlobalLeaderboard();
+   await loadFriendsLeaderboard();
+   setToast(`DEV: removed leaderboard score`);
+  }catch(e){console.error(e);setToast(`Remove score failed: ${e.message}`)}
+  finally{setDevBusy(false)}
+ }
+ async function devResetTargetProfilePublic(){
+  if(!supabase||!user||!isDev||!devTarget)return setToast("Dev only");
+  if(!requireDevReason("reset avatar/bio"))return;
+  if(!confirm(`Reset avatar and bio for ${devTarget.username}?`))return;
+  setDevBusy(true);
+  try{
+   await supabase.from("profiles").update({bio:"",avatar_url:null,updated_at:new Date().toISOString()}).eq("id",devTarget.id);
+   await devAudit("reset_profile_public",devTarget.id,{reason:devReason,username:devTarget.username});
+   setDevTarget({...devTarget,bio:"",avatar_url:null});
+   setToast("DEV: reset avatar/bio");
+  }catch(e){console.error(e);setToast(`Reset profile failed: ${e.message}`)}
+  finally{setDevBusy(false)}
+ }
+
+ 
+ function requireDevReason(action="action"){
+  if(!devReason.trim()){
+   setToast(`DEV: ต้องกรอกเหตุผลก่อนทำ ${action}`);
+   return false;
+  }
+  return true;
+ }
+ async function devRefreshLogs(){
+  if(!supabase||!user||!isDev)return;
+  try{
+   const {data,error}=await supabase.from("dev_audit_log").select("id,action,details,created_at,dev_id,target_id").order("created_at",{ascending:false}).limit(20);
+   if(error)throw error;
+   setDevLogs(data||[]);
+  }catch(e){console.error(e);setToast(`โหลด audit log ไม่สำเร็จ: ${e.message}`)}
+ }
+ async function devSetAccountStatus(status){
+  if(!supabase||!user||!isDev||!devTarget)return setToast("Dev only");
+  if(!requireDevReason(status))return;
+  let until=null;
+  if(status==="suspended"){
+   const days=Math.max(1,Math.floor(num(devSuspendDays,7)));
+   until=new Date(Date.now()+days*24*60*60*1000).toISOString();
+  }
+  if(!confirm(`Set ${devTarget.username} status to ${status}?`))return;
+  setDevBusy(true);
+  try{
+   await supabase.from("profiles").update({account_status:status,suspended_until:until,updated_at:new Date().toISOString()}).eq("id",devTarget.id);
+   await devAudit(`set_status_${status}`,devTarget.id,{reason:devReason,status,suspended_until:until});
+   setDevTarget({...devTarget,account_status:status,suspended_until:until});
+   setToast(`DEV: account status set to ${status}`);
+   await devRefreshLogs();
+  }catch(e){console.error(e);setToast(`Set status failed: ${e.message}`)}
+  finally{setDevBusy(false)}
+ }
+ async function devResetTargetScoreFull(){
+  if(!supabase||!user||!isDev||!devTarget)return setToast("Dev only");
+  if(!requireDevReason("reset score"))return;
+  if(!confirm(`Reset score for ${devTarget.username}?`))return;
+  setDevBusy(true);
+  try{
+   await Promise.all([
+    supabase.from("leaderboard").delete().eq("user_id",devTarget.id),
+    supabase.from("profiles").update({best_score:0,best_combo:1,best_style:0,updated_at:new Date().toISOString()}).eq("id",devTarget.id)
+   ]);
+   await devAudit("reset_score_full",devTarget.id,{reason:devReason});
+   setDevTarget({...devTarget,best_score:0,best_combo:1,best_style:0});
+   await loadGlobalLeaderboard();await loadFriendsLeaderboard();await devRefreshLogs();
+   setToast("DEV: reset score completed");
+  }catch(e){console.error(e);setToast(`Reset score failed: ${e.message}`)}
+  finally{setDevBusy(false)}
+ }
+ async function devResetTargetWardrobe(){
+  if(!supabase||!user||!isDev||!devTarget)return setToast("Dev only");
+  if(!requireDevReason("reset wardrobe"))return;
+  if(!confirm(`Reset wardrobe for ${devTarget.username}?`))return;
+  setDevBusy(true);
+  try{
+   await Promise.all([
+    supabase.from("player_inventory").upsert({user_id:devTarget.id,...DEFAULT_PARTS,effects:["classic"],updated_at:new Date().toISOString()},{onConflict:"user_id"}),
+    supabase.from("player_loadouts").upsert({user_id:devTarget.id,...DEFAULT_LOADOUT,skin_effect:"classic",updated_at:new Date().toISOString()},{onConflict:"user_id"})
+   ]);
+   await devAudit("reset_wardrobe",devTarget.id,{reason:devReason});
+   await devRefreshLogs();
+   setToast("DEV: reset wardrobe completed");
+  }catch(e){console.error(e);setToast(`Reset wardrobe failed: ${e.message}`)}
+  finally{setDevBusy(false)}
+ }
+ async function devModifyTargetItem(mode){
+  if(!supabase||!user||!isDev||!devTarget)return setToast("Dev only");
+  if(!requireDevReason(`${mode} item`))return;
+  const cat=devItemCat;
+  const itemId=devItemId;
+  const validEffects=EFFECTS.map(x=>x.id);
+  const validParts=PARTS[cat]?.map(x=>x.id)||[];
+  if(cat==="effects"&&!validEffects.includes(itemId))return setToast("Invalid effect");
+  if(cat!=="effects"&&!validParts.includes(itemId))return setToast("Invalid item");
+  if(!confirm(`${mode==="give"?"Give":"Remove"} ${itemId} ${cat} for ${devTarget.username}?`))return;
+  setDevBusy(true);
+  try{
+   if(cat==="effects"){
+    const {data:inv}=await supabase.from("player_inventory").select("effects").eq("user_id",devTarget.id).maybeSingle();
+    let arr=Array.isArray(inv?.effects)?inv.effects:["classic"];
+    arr=mode==="give"?Array.from(new Set([...arr,itemId])):arr.filter(x=>x!==itemId||x==="classic");
+    if(!arr.includes("classic"))arr.unshift("classic");
+    await supabase.from("player_inventory").upsert({user_id:devTarget.id,effects:arr,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+   }else{
+    const {data:inv}=await supabase.from("player_inventory").select("hairs,tops,pants,shoes,effects").eq("user_id",devTarget.id).maybeSingle();
+    const base=normParts(inv||DEFAULT_PARTS);
+    let arr=Array.isArray(base[cat])?base[cat]:DEFAULT_PARTS[cat];
+    arr=mode==="give"?Array.from(new Set([...arr,itemId])):arr.filter(x=>!DEFAULT_PARTS[cat].includes(x)&&x!==itemId?true:DEFAULT_PARTS[cat].includes(x));
+    if(mode==="remove")arr=Array.from(new Set([...DEFAULT_PARTS[cat],...arr.filter(x=>x!==itemId)]));
+    await supabase.from("player_inventory").upsert({user_id:devTarget.id,...base,[cat]:arr,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+   }
+   await devAudit(`${mode}_item`,devTarget.id,{reason:devReason,cat,itemId});
+   await devRefreshLogs();
+   setToast(`DEV: ${mode} item done`);
+  }catch(e){console.error(e);setToast(`${mode} item failed: ${e.message}`)}
+  finally{setDevBusy(false)}
  }
 
  function fresh(){const low=quality==="low"||(quality==="auto"&&innerWidth<768);return{visual:low?"low":"high",speed:5,distance:0,score:0,bonus:0,anim:0,coins:0,lives:3,combo:1,timer:0,maxCombo:1,style:0,dodges:0,gameOver:false,inv:0,shield:0,magnet:0,boost:0,heat:0,shake:0,player:{x:120,y:GROUND-76,w:46,h:76,vy:0,on:true,duck:false},obs:[],coinItems:[],power:[],particles:[],texts:[],trails:[],nextObs:90,nextCoin:45,nextPower:260,build:Array.from({length:12},(_,i)=>({x:i*95,w:70+Math.random()*45,h:90+Math.random()*190,win:Math.floor(4+Math.random()*7)})),stars:Array.from({length:low?40:70},()=>({x:Math.random()*W,y:Math.random()*240,r:Math.random()*1.6+.4})),rain:Array.from({length:low?42:95},()=>({x:Math.random()*W,y:Math.random()*H,len:8+Math.random()*18,spd:8+Math.random()*7,a:.12+Math.random()*.22}))}}
@@ -401,7 +625,7 @@ export default function SwagRunnerNightCityGame(){
  {active==="friends"&&<div><div className="row"style={{justifyContent:"space-between"}}><div><h2>👥 Friends</h2><p className="muted">เพิ่มเพื่อนด้วย Friend Code ดูออนไลน์ และแข่งคะแนนเฉพาะเพื่อน</p></div><Button variant="outline"disabled={!user}onClick={()=>loadFriendsData()}>Refresh</Button></div>{!user&&<div className="notice">ต้อง Login ก่อนใช้ระบบเพื่อน</div>}{user&&<div className="notice">Friend Code ของคุณ: <b>{friendCode||"กำลังสร้าง..."}</b> — ส่งโค้ดนี้ให้เพื่อนเพิ่มคุณได้</div>}{user&&<><div className="formrow"style={{marginTop:12}}><input className="input"value={friendSearch}onChange={e=>setFriendSearch(e.target.value)}placeholder="ใส่ Friend Code เช่น NXAH-4821 หรือ username"/><Button onClick={sendFriendRequest}>เพิ่มเพื่อน</Button></div>{incoming.length>0&&<div style={{marginTop:14}}><b>คำขอเป็นเพื่อน</b>{incoming.map(r=><div className="friend-card"key={r.id}><span className={isOnline(r.requester?.last_seen)?"online-dot":"offline-dot"}/><div><b>{r.requester?.username}</b><div className="muted">{r.requester?.friend_code||""} • Best {r.requester?.best_score||0}</div></div><div className="row"><Button onClick={()=>acceptFriend(r)}>รับ</Button><Button variant="outline"onClick={()=>rejectFriend(r)}>ปฏิเสธ</Button></div></div>)}</div>}<div style={{marginTop:14}}><b>เพื่อนของคุณ</b>{friends.length===0?<div className="notice">ยังไม่มีเพื่อน ลองค้นหา username แล้วเพิ่มเพื่อน</div>:friends.map(f=><div className="friend-card clickable"key={f.id}onClick={()=>openProfile({id:f.id,name:f.username,score:f.best_score||0,maxCombo:1,styleScore:0,coins:0})}><span className={isOnline(f.last_seen)?"online-dot":"offline-dot"}/><div><b>{f.username}</b><div className="muted">{f.friend_code||""} • {isOnline(f.last_seen)?"ออนไลน์":"ออฟไลน์"} • Best {f.best_score||0}</div></div><span className="pill">{grade(f.best_score||0)}</span></div>)}</div><div style={{marginTop:16}}><h3>🏆 Friends Leaderboard</h3>{friendsLeaderboard.length===0?<div className="notice">ยังไม่มีคะแนนเพื่อน</div>:friendsLeaderboard.map((e,i)=><div key={e.id}className="rank rank-with-avatar clickable"onClick={()=>openProfile(e)}><div className="badge">{i+1}</div>{leaderboardAvatar(e)}<div><b>{e.name}</b><div className="muted">x{e.maxCombo||1} • Style {e.styleScore||0}</div></div><b style={{color:"#fde047",fontSize:22}}>{e.score}</b></div>)}</div></>}</div>}
  {active==="daily"&&<div><h2>🎯 {ch.title}</h2><p className="muted">{ch.desc}</p><div className="notice"><div style={{height:14,borderRadius:999,background:"#020617",overflow:"hidden"}}><div style={{height:"100%",width:`${clamp(progress/ch.target*100,0,100)}%`,background:"#facc15"}}/></div><p>Progress: {Math.min(progress,ch.target)} / {ch.target}</p><p className="muted">Reward +{ch.reward} coins</p></div></div>}
  {active==="wardrobe"&&<div><div className="row"style={{justifyContent:"space-between"}}><div><h2>🧥 Shop Preview</h2><p className="muted">แตะไอเทมเพื่อ Preview ก่อนซื้อ/Equip</p></div><b style={{color:"#fde047"}}>Wallet 🪙 {walletCoins}</b></div>{locked&&<div className="notice">🔒 กำลังเล่นอยู่: เปลี่ยนได้หลังจบรอบ</div>}<div className="grid3"style={{marginTop:12}}><div>{renderMiniPreview()}<Button style={{width:"100%",marginTop:8}}disabled={locked||!previewItem}onClick={buyOrEquipPreview}>{previewItem?"Buy / Equip Preview":"เลือกไอเทมก่อน"}</Button><Button variant="outline"style={{width:"100%",marginTop:8}}disabled={locked}onClick={()=>{setPreviewLoadout(loadout);setPreviewSkin(skin);setPreviewItem(null)}}>Reset Preview</Button></div><div style={{gridColumn:"span 2"}}>{[["hairs","Hair"],["tops","Top"],["pants","Pants"],["shoes","Shoes"]].map(([cat,title])=><div key={cat}style={{marginBottom:16}}><b>{title}</b><div className="grid2">{PARTS[cat].map(item=>{const key={hairs:"hair",tops:"top",pants:"pants",shoes:"shoes"}[cat],on=normLoadout(loadout)[key]===item.id,pre=normLoadout(previewLoadout)[key]===item.id,un=unlockedParts[cat]?.includes(item.id),pv=cat==="hairs"?`linear-gradient(90deg,${item.hair},${item.cap||item.hair})`:cat==="tops"?`linear-gradient(90deg,${item.main},${item.accent||item.sleeve||item.inner||item.detail})`:cat==="pants"?`linear-gradient(90deg,${item.main},${item.detail})`:`linear-gradient(90deg,${item.main},${item.sole})`;return <button key={item.id}disabled={locked}onClick={()=>previewPart(cat,item)}className={`item ${on?"on":""} ${pre&&!on?"preview":""}`}><div className="swatch"style={{background:pv}}/><b>{item.name}</b><div className="muted">{un?(on?"Equipped":"Owned"):`Unlock ${item.price}`}{pre&&!on?" • Preview":""}</div></button>})}</div></div>)}<div><b>Skin Effect</b><div className="grid2">{EFFECTS.map(e=><button key={e.id}disabled={locked}onClick={()=>previewEffect(e.id)}className={`item ${skin===e.id?"on":""} ${previewSkin===e.id&&skin!==e.id?"preview":""}`}><div className="swatch"style={{background:`radial-gradient(circle,${e.accent},${e.glow},rgba(15,23,42,.85))`}}/><b>{e.name}</b><div className="muted">{unlockedEffects.includes(e.id)?(skin===e.id?"Equipped":"Owned"):`Unlock ${e.price}`}</div></button>)}</div></div></div></div></div>}
- {active==="settings"&&<div><div className="auth-hero"><div><div className="pill">🔐 LOGIN REQUIRED</div><h2>Welcome to Swag Night Runner</h2><p>Login เพื่อบันทึกคะแนน โปรไฟล์ รูป Avatar เพื่อน ของแต่งตัว และอันดับออนไลน์</p></div><div className="auth-mini-card"><b>Cloud Save</b><span>{user?"ONLINE":"LOCKED"}</span></div></div><div className="auth-card"><div className="auth-side"><div className="auth-logo">SNR</div><h3>{user?"Cloud Profile Ready":"Login to Play"}</h3><p>{user?"ข้อมูลของคุณพร้อม sync กับ Supabase แล้ว":"สร้างบัญชีหรือเข้าสู่ระบบก่อนเริ่มเล่น เพื่อให้คะแนนและของแต่งตัวไม่หาย"}</p><div className="auth-feature">🏆 Online Leaderboard</div><div className="auth-feature">👥 Friends & Profile</div><div className="auth-feature">🧥 Wardrobe Cloud Save</div></div><div className="auth-form"><div className="row"style={{justifyContent:"space-between"}}><div><h3>{user?"บัญชีของคุณ":"เข้าสู่ระบบ"}</h3><p className="muted">{authStatus}</p></div>{user?<span className="auth-status online">ONLINE</span>:<span className="auth-status locked">GUEST</span>}</div>{user?<div className="signed-box"><div className="avatar-box small">{profileModal?.avatar_url?<img src={profileModal.avatar_url}alt={playerName}/>:<span>{playerName.slice(0,1).toUpperCase()}</span>}</div><div><b>{playerName}</b><p className="muted">Friend Code: {friendCode||"กำลังสร้าง..."}</p></div></div>:<><label>Username</label><input className={`input auth-input username-input ${usernameStatusType}`}value={signupUsername}onChange={e=>{const v=cleanUsername(e.target.value);setSignupUsername(v)}}placeholder="เช่น _nxah.qt"maxLength={16}/><p className={`username-status ${usernameStatusType}`}>{usernameStatus}</p><label>Email</label><input className="input auth-input"value={email}onChange={e=>setEmail(e.target.value)}placeholder="your@email.com"type="email"/><label>Password</label><div className="password-wrap"><input className="input auth-input"value={password}onChange={e=>setPassword(e.target.value)}placeholder="Password 6+"type={showPassword?"text":"password"}/><button type="button"onClick={()=>setShowPassword(!showPassword)}>{showPassword?"Hide":"Show"}</button></div><p className="muted">ตั้ง Username ครั้งแรกตอนสมัคร • เปลี่ยนภายหลังใน My Profile ใช้ 10,000 coins</p></>}<div className="auth-actions">{user?<><Button onClick={openMyProfile}>👤 My Profile</Button><Button variant="outline"onClick={()=>loadCloudPlayer(user)}>Sync Profile</Button><Button variant="outline"disabled={locked||cloudLoading}onClick={logout}>Logout</Button></>:<><Button disabled={locked||cloudLoading}onClick={()=>handleEmailAuth("signin")}>{cloudLoading?"Loading...":"Login"}</Button><Button variant="outline"disabled={locked||cloudLoading||usernameStatusType!=="good"}onClick={()=>handleEmailAuth("signup")}>Create Account</Button></>}</div></div></div>{isDev&&<div className="dev-panel"><div className="row"style={{justifyContent:"space-between"}}><div><h3>🧪 Dev Panel</h3><p className="muted">เครื่องมือทดสอบ เฉพาะบัญชี role = dev</p></div><span className="pill">DEV ONLY</span></div><div className="grid4"style={{marginTop:10}}><div><label>Coins</label><input className="input"value={devCoins}onChange={e=>setDevCoins(e.target.value.replace(/[^0-9]/g,""))}/></div><Button onClick={devAddCoins}>+ Add Coins</Button><Button variant="outline"onClick={devUnlockAll}>Unlock All</Button><Button variant="outline"onClick={devResetMyTestData}>Reset My Data</Button></div><p className="muted">Dev เปลี่ยน Username ฟรีใน My Profile • ไม่สามารถแก้ข้อมูลผู้เล่นคนอื่นจาก Panel นี้</p></div>}<div className="grid4"style={{marginTop:12}}><Button variant="outline"disabled={locked}onClick={cycleQuality}>Quality: {quality.toUpperCase()}</Button><div className="notice">มือถือ: ขวา=กระโดด / ซ้ายค้าง=หมอบ</div><div className="notice">คอม: Space/↑ กระโดด ↓ หมอบ</div><div className="notice">v4.4 Beautiful Login</div></div></div>}
+ {active==="settings"&&<div><div className="auth-hero"><div><div className="pill">🔐 LOGIN REQUIRED</div><h2>Welcome to Swag Night Runner</h2><p>Login เพื่อบันทึกคะแนน โปรไฟล์ รูป Avatar เพื่อน ของแต่งตัว และอันดับออนไลน์</p></div><div className="auth-mini-card"><b>Cloud Save</b><span>{user?"ONLINE":"LOCKED"}</span></div></div><div className="auth-card"><div className="auth-side"><div className="auth-logo">SNR</div><h3>{user?"Cloud Profile Ready":"Login to Play"}</h3><p>{user?"ข้อมูลของคุณพร้อม sync กับ Supabase แล้ว":"สร้างบัญชีหรือเข้าสู่ระบบก่อนเริ่มเล่น เพื่อให้คะแนนและของแต่งตัวไม่หาย"}</p><div className="auth-feature">🏆 Online Leaderboard</div><div className="auth-feature">👥 Friends & Profile</div><div className="auth-feature">🧥 Wardrobe Cloud Save</div></div><div className="auth-form"><div className="row"style={{justifyContent:"space-between"}}><div><h3>{user?"บัญชีของคุณ":"เข้าสู่ระบบ"}</h3><p className="muted">{authStatus}</p></div>{user?<span className="auth-status online">ONLINE</span>:<span className="auth-status locked">GUEST</span>}</div>{user?<div className="signed-box"><div className="avatar-box small">{profileModal?.avatar_url?<img src={profileModal.avatar_url}alt={playerName}/>:<span>{playerName.slice(0,1).toUpperCase()}</span>}</div><div><b>{playerName}</b><p className="muted">Friend Code: {friendCode||"กำลังสร้าง..."}</p></div></div>:<><label>Username</label><input className={`input auth-input username-input ${usernameStatusType}`}value={signupUsername}onChange={e=>{const v=cleanUsername(e.target.value);setSignupUsername(v)}}placeholder="เช่น _nxah.qt"maxLength={16}/><p className={`username-status ${usernameStatusType}`}>{usernameStatus}</p><label>Email</label><input className="input auth-input"value={email}onChange={e=>setEmail(e.target.value)}placeholder="your@email.com"type="email"/><label>Password</label><div className="password-wrap"><input className="input auth-input"value={password}onChange={e=>setPassword(e.target.value)}placeholder="Password 6+"type={showPassword?"text":"password"}/><button type="button"onClick={()=>setShowPassword(!showPassword)}>{showPassword?"Hide":"Show"}</button></div><p className="muted">ตั้ง Username ครั้งแรกตอนสมัคร • เปลี่ยนภายหลังใน My Profile ใช้ 10,000 coins</p></>}<div className="auth-actions">{user?<><Button onClick={openMyProfile}>👤 My Profile</Button><Button variant="outline"onClick={()=>loadCloudPlayer(user)}>Sync Profile</Button><Button variant="outline"disabled={locked||cloudLoading}onClick={logout}>Logout</Button></>:<><Button disabled={locked||cloudLoading}onClick={()=>handleEmailAuth("signin")}>{cloudLoading?"Loading...":"Login"}</Button><Button variant="outline"disabled={locked||cloudLoading||usernameStatusType!=="good"}onClick={()=>handleEmailAuth("signup")}>Create Account</Button></>}</div></div></div>{isDev&&<div className="dev-panel"><div className="row"style={{justifyContent:"space-between"}}><div><h3>🧪 Dev Dashboard</h3><p className="muted">เครื่องมือ Dev สำหรับทดสอบและดูแลผู้เล่น • role = dev เท่านั้น</p></div><span className="pill">DEV ONLY</span></div><div className="dev-section"><h4>Self Test Tools</h4><div className="grid4"style={{marginTop:10}}><div><label>Coins</label><input className="input"value={devCoins}onChange={e=>setDevCoins(e.target.value.replace(/[^0-9]/g,""))}/></div><Button onClick={devAddCoins}>+ Add Coins</Button><Button variant="outline"onClick={devUnlockAll}>Unlock All</Button><Button variant="outline"onClick={devResetMyTestData}>Reset My Data</Button></div><p className="muted">Dev เปลี่ยน Username ฟรีใน My Profile • Self tools กระทบเฉพาะบัญชีตัวเอง</p></div><div className="dev-section"><h4>Player Lookup</h4><div className="formrow"><input className="input"value={devLookup}onChange={e=>setDevLookup(e.target.value)}placeholder="Username หรือ Friend Code"/><Button disabled={devBusy}onClick={devLookupPlayer}>{devBusy?"Loading...":"Search"}</Button></div>{devTarget&&<div className="dev-target"><div className="profile-head"><div className="avatar-box small">{devTarget.avatar_url?<img src={devTarget.avatar_url}alt={devTarget.username}/>:<span>{devTarget.username?.slice(0,1).toUpperCase()}</span>}</div><div><h3>{devTarget.username}</h3><p className="muted">{devTarget.friend_code||"No Friend Code"} • role: <b>{devTarget.role}</b> • status: <b>{devTarget.account_status||"active"}</b> • {isOnline(devTarget.last_seen)?"ออนไลน์":"ออฟไลน์"}</p></div></div><div className="profile-grid"><div className="stat"><small>Coins</small><b>{devTarget.coins||0}</b></div><div className="stat"><small>Best</small><b>{devTarget.best_score||0}</b></div><div className="stat"><small>Combo</small><b>x{devTarget.best_combo||1}</b></div><div className="stat"><small>Style</small><b>{devTarget.best_style||0}</b></div></div><div className="notice"style={{marginTop:10}}><b>Bio</b><p style={{marginBottom:0,whiteSpace:"pre-wrap"}}>{devTarget.bio||"No bio"}</p></div><div className="grid4"style={{marginTop:12}}><div><label>Set Coins</label><input className="input"value={devTargetCoins}onChange={e=>setDevTargetCoins(e.target.value.replace(/[^0-9]/g,""))}/></div><Button disabled={devBusy}onClick={devSetTargetCoins}>Set Coins</Button><Button disabled={devBusy}onClick={devAddTargetCoins}>+ Add Coins</Button><Button variant="outline"disabled={devBusy}onClick={devRemoveTargetScore}>Remove Score</Button></div><div className="grid4"style={{marginTop:10}}><div><label>Role</label><select className="input"value={devTargetRole}onChange={e=>setDevTargetRole(e.target.value)}><option value="player">player</option><option value="dev">dev</option></select></div><Button variant="outline"disabled={devBusy}onClick={devSetTargetRoleNow}>Set Role</Button><Button variant="outline"disabled={devBusy}onClick={devResetTargetProfilePublic}>Reset Avatar/Bio</Button><Button variant="outline"onClick={()=>openProfile({id:devTarget.id,name:devTarget.username,score:devTarget.best_score||0,coins:devTarget.coins||0})}>View Profile</Button></div><div className="dev-section"><h4>Moderation</h4><div><label>Reason Required</label><textarea className="textarea"value={devReason}onChange={e=>setDevReason(e.target.value.slice(0,180))}placeholder="เหตุผล เช่น คะแนนผิดปกติ / รูปไม่เหมาะสม / ทดสอบระบบ"/></div><div className="grid4"style={{marginTop:10}}><Button variant="outline"disabled={devBusy}onClick={()=>devSetAccountStatus("banned")}>Ban</Button><Button variant="outline"disabled={devBusy}onClick={()=>devSetAccountStatus("active")}>Unban / Active</Button><div><label>Suspend Days</label><input className="input"value={devSuspendDays}onChange={e=>setDevSuspendDays(e.target.value.replace(/[^0-9]/g,""))}/></div><Button variant="outline"disabled={devBusy}onClick={()=>devSetAccountStatus("suspended")}>Suspend</Button></div><div className="grid4"style={{marginTop:10}}><Button variant="outline"disabled={devBusy}onClick={devResetTargetScoreFull}>Reset Score Full</Button><Button variant="outline"disabled={devBusy}onClick={devResetTargetWardrobe}>Reset Wardrobe</Button><Button variant="outline"disabled={devBusy}onClick={devResetTargetProfilePublic}>Reset Avatar/Bio</Button><Button variant="outline"disabled={devBusy}onClick={devRemoveTargetScore}>Remove Score Only</Button></div></div><div className="dev-section"><h4>Give / Remove Item</h4><div className="grid4"><div><label>Category</label><select className="input"value={devItemCat}onChange={e=>{setDevItemCat(e.target.value);const cat=e.target.value;setDevItemId(cat==="effects"?EFFECTS[0].id:PARTS[cat]?.[0]?.id||"")}}><option value="hairs">Hair</option><option value="tops">Top</option><option value="pants">Pants</option><option value="shoes">Shoes</option><option value="effects">Effect</option></select></div><div><label>Item</label><select className="input"value={devItemId}onChange={e=>setDevItemId(e.target.value)}>{(devItemCat==="effects"?EFFECTS:PARTS[devItemCat]||[]).map(x=><option key={x.id}value={x.id}>{x.name}</option>)}</select></div><Button disabled={devBusy}onClick={()=>devModifyTargetItem("give")}>Give Item</Button><Button variant="outline"disabled={devBusy}onClick={()=>devModifyTargetItem("remove")}>Remove Item</Button></div></div><p className="muted">ทุก action จะถูกบันทึกลง dev_audit_log</p></div>}</div><div className="dev-section"><div className="row"style={{justifyContent:"space-between"}}><h4>Audit Log Viewer</h4><Button variant="outline"onClick={devRefreshLogs}>Refresh Logs</Button></div>{devLogs.length===0?<div className="notice">ยังไม่มี Audit Log หรือยังไม่ได้กด Refresh</div>:devLogs.map(log=><div className="audit-row"key={log.id}><b>{log.action}</b><span>{new Date(log.created_at).toLocaleString("th-TH")}</span><pre>{JSON.stringify(log.details||{},null,2)}</pre></div>)}</div></div>}<div className="grid4"style={{marginTop:12}}><Button variant="outline"disabled={locked}onClick={cycleQuality}>Quality: {quality.toUpperCase()}</Button><div className="notice">มือถือ: ขวา=กระโดด / ซ้ายค้าง=หมอบ</div><div className="notice">คอม: Space/↑ กระโดด ↓ หมอบ</div><div className="notice">v4.4 Beautiful Login</div></div></div>}
  </div>{profileModalView()}</>;
 
  if(screen==="landing")return <div className="app"><div className="shell landing"><motion.div className="card hero"initial={{opacity:0,y:18}}animate={{opacity:1,y:0}}><div className="pill">FRIENDS • SHOP PREVIEW • CLOUD SAVE</div><h1 className="title">SWAG<br/>NIGHT<br/><span>RUNNER</span></h1><p className="sub">วิ่งฝ่าเมืองกลางคืน เพิ่มเพื่อน แข่งกับเพื่อน แต่งตัวพร้อม Preview ไอเทม และ save ข้อมูลออนไลน์ • Username ใช้ A-Z/0-9 และ _ . - @ ได้</p><div className="formrow"><div className="input readonly-name">{user?`PLAYER: ${playerName}`:"LOGIN REQUIRED"}</div><Button onClick={reset}>{user?"▶ เข้าเล่น":"🔐 Login to Play"}</Button></div>{!user&&<div className="notice"style={{marginTop:12}}>🔐 Login to Play — บันทึกคะแนน โปรไฟล์ Avatar เพื่อน และของแต่งตัวออนไลน์</div>}<div className="grid4"style={{marginTop:12}}><div className="notice">👥 Friends</div><div className="notice">🏆 Friends Leaderboard</div><div className="notice">🧥 Shop Preview</div><div className="notice">☁️ Cloud Save</div></div></motion.div><motion.div initial={{opacity:0,y:18}}animate={{opacity:1,y:0}}>{panel()}</motion.div></div></div>;
