@@ -192,3 +192,13 @@ Run SUPABASE-V5-SQL.sql in Supabase SQL Editor.
 - Removed body glow / aura from the character render completely.
 - Trail effects now stay at the feet only in gameplay and Style Preview.
 - No new Supabase SQL is required.
+
+## v5.5 Double Jump + Jump Feedback
+- Added 2-jump system:
+  - First jump from ground.
+  - Second jump in air.
+  - Jump count resets on landing.
+- Added mobile tap support for repeated jump taps.
+- Added foot burst feedback for normal jump, double jump, and landing.
+- Added small style/combo reward for successful double jump.
+- No new Supabase SQL is required.
