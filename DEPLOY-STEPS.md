@@ -9,7 +9,7 @@
 ## Required Supabase SQL
 Before using Friends, run:
 
-`SUPABASE-V3-SOCIAL-SQL.sql`
+`SUPABASE-V4-PROFILE-SQL.sql`
 
 in Supabase → SQL Editor → New Query → Run.
 
@@ -38,3 +38,36 @@ Environment variables must already exist:
 - Username now allows English letters, numbers, and these symbols: `_ . - @`.
 - Still blocks Thai characters, spaces, emoji, and other special characters.
 - Duplicate usernames are still blocked by Supabase unique index.
+
+## v4 Profile Update
+- Click users in Global Leaderboard / Friends Leaderboard to open profile modal.
+- Players can edit username and bio.
+- Players can upload avatar images from device.
+- Profile displays avatar, username, friend code, rank, best score, coins, max combo, style, online status, and bio.
+- You can add friends from another player's profile.
+- Run `SUPABASE-V4-PROFILE-SQL.sql` in Supabase SQL Editor.
+- Avatar bucket name: `avatars`; max upload size: 2MB; allowed: jpg/png/webp/gif.
+
+
+## v4.1 Avatar Leaderboard
+- Global Leaderboard and Friends Leaderboard show player avatar images.
+- Shows top 50 entries.
+- If no avatar exists, it shows the first letter of the username.
+
+
+## v4.2 My Profile Button
+- Added `👤 My Profile` button in the Login/Settings tab after login.
+- Opens the current user's profile modal directly for viewing/editing avatar, username, and bio.
+- Added `Sync Profile` button to refresh cloud data.
+
+## v4.3 Login Required
+- Players must login before starting the game.
+- Landing button becomes `🔐 Login to Play` when logged out.
+- Pressing play while logged out opens the Login/Settings tab and shows a message.
+- Game restart controls are protected by the same login check.
+
+## v4.4 Beautiful Login
+- Reworked Login/Settings into a polished neon login panel.
+- Added Login to Play messaging.
+- Added password show/hide toggle.
+- Added account status card, My Profile, Sync Profile, and Logout area after login.
