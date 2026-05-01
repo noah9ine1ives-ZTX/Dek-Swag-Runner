@@ -217,3 +217,19 @@ Run SUPABASE-V5-SQL.sql in Supabase SQL Editor.
 - Replaced undefined `pop()` calls with existing `txt()` feedback helper.
 - Added defensive defaults for jump/fast fall player fields.
 - No new Supabase SQL is required.
+
+## v5.7.1 Obstacle Refactor Hotbase
+- Based on v5.6.1 Jump Hotfix, so the `pop()` jump crash fix is preserved.
+- Added obstacle type schema:
+  - LOW_JUMP
+  - HIGH_SLIDE
+  - TALL_DOUBLE
+  - MIXED
+- Added warning icons above obstacles:
+  - ↑ Jump
+  - ↓ Slide
+  - ↑↑ Double
+  - ↕ Mixed
+- Added separate player/obstacle hitbox helpers.
+- Added style reward for clearing obstacle types.
+- No new Supabase SQL is required.
