@@ -211,3 +211,9 @@ Run SUPABASE-V5-SQL.sql in Supabase SQL Editor.
 - Added small style/combo reward for controlled quick landing.
 - Added subtle downward speed streaks during fast fall.
 - No new Supabase SQL is required.
+
+## v5.6.1 Jump Hotfix
+- Fixed runtime crash when pressing Jump.
+- Replaced undefined `pop()` calls with existing `txt()` feedback helper.
+- Added defensive defaults for jump/fast fall player fields.
+- No new Supabase SQL is required.
