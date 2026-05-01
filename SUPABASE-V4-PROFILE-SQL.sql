@@ -232,3 +232,29 @@ using (
   bucket_id = 'avatars'
   and (storage.foldername(name))[1] = auth.uid()::text
 );
+
+
+
+-- SWAG NIGHT RUNNER v4.7 DEV ACCOUNT / DEV PANEL
+alter table public.profiles
+add column if not exists role text not null default 'player';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'profiles_role_chk'
+  ) then
+    alter table public.profiles
+    add constraint profiles_role_chk
+    check (role in ('player','dev'))
+    not valid;
+  end if;
+end $$;
+
+-- IMPORTANT:
+-- After creating your dev account in the game, run one of these:
+-- update public.profiles set role = 'dev' where username = 'DEV';
+-- update public.profiles set role = 'dev' where username = '_nxah.qt';
+--
+-- To remove dev:
+-- update public.profiles set role = 'player' where username = 'DEV';

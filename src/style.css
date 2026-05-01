@@ -16,3 +16,5 @@
 .username-status.good{color:#86efac}
 .username-status.bad{color:#fca5a5}
 .username-status.checking{color:#fde68a}
+
+.dev-panel{margin-top:12px;border:1px solid rgba(236,72,153,.35);background:radial-gradient(circle at 12% 0%,rgba(236,72,153,.16),transparent 38%),rgba(15,23,42,.72);border-radius:24px;padding:16px}.dev-panel h3{margin:0;font-size:24px}.dev-panel label{display:block;margin-bottom:6px;font-size:12px;font-weight:1000;color:#fbcfe8}

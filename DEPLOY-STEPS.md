@@ -86,3 +86,19 @@ Environment variables must already exist:
 - Username input turns green when available.
 - Username input turns red when invalid or already taken.
 - Create Account button is disabled until username is available.
+
+## v4.7 Dev Account / Dev Panel
+- Adds `profiles.role` with values `player` or `dev`.
+- Dev-only panel appears in Login/Settings when `role = 'dev'`.
+- Dev can add coins to self, unlock all items/effects, reset own test data.
+- Dev can rename for free in My Profile.
+- Dev panel cannot edit other players.
+
+### Make your account Dev
+Run this in Supabase SQL Editor after creating/logging into the account:
+
+```sql
+update public.profiles
+set role = 'dev'
+where username = 'YOUR_USERNAME';
+```
