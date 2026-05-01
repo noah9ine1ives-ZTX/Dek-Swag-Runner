@@ -233,3 +233,9 @@ Run SUPABASE-V5-SQL.sql in Supabase SQL Editor.
 - Added separate player/obstacle hitbox helpers.
 - Added style reward for clearing obstacle types.
 - No new Supabase SQL is required.
+
+## v5.7.1 Install Fix
+- Added package-lock.json.
+- Pinned dependency versions instead of using `latest`.
+- This reduces Vercel npm install failures such as `Exit handler never called`.
+- If Vercel still fails at Installing dependencies, redeploy once with cache disabled.
