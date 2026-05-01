@@ -157,3 +157,15 @@ trailEffect = none
 
 ### Required SQL
 Run SUPABASE-V5-SQL.sql in Supabase SQL Editor.
+
+## v5.1 Shop Item Thumbnail System
+- Shop item cards now show mini visual thumbnails instead of simple color swatches.
+- Added thumbnail renderers for:
+  - Hair
+  - Top
+  - Bottom
+  - Shoes
+  - Accessory
+  - Trail Effect
+- Players can visually understand each item before preview/buy/equip.
+- No new Supabase SQL is required for this version if `SUPABASE-V5-SQL.sql` was already run.
