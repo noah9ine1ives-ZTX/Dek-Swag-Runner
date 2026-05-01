@@ -9,7 +9,7 @@
 ## Required Supabase SQL
 Before using Friends, run:
 
-`SUPABASE-V4-PROFILE-SQL.sql`
+`SUPABASE-V5-SQL.sql`
 
 in Supabase → SQL Editor → New Query → Run.
 
@@ -45,7 +45,7 @@ Environment variables must already exist:
 - Players can upload avatar images from device.
 - Profile displays avatar, username, friend code, rank, best score, coins, max combo, style, online status, and bio.
 - You can add friends from another player's profile.
-- Run `SUPABASE-V4-PROFILE-SQL.sql` in Supabase SQL Editor.
+- Run `SUPABASE-V5-SQL.sql` in Supabase SQL Editor.
 - Avatar bucket name: `avatars`; max upload size: 2MB; allowed: jpg/png/webp/gif.
 
 
@@ -115,7 +115,7 @@ Adds advanced dev tools:
 - View target profile.
 - Audit log table: `dev_audit_log`.
 
-Run `SUPABASE-V4-PROFILE-SQL.sql` again after deploying this version.
+Run `SUPABASE-V5-SQL.sql` again after deploying this version.
 
 ## v4.9 Moderation System
 Adds advanced player moderation:
@@ -128,4 +128,32 @@ Adds advanced player moderation:
 7. Reason Required for important dev actions.
 8. Audit Log Viewer in-game.
 
-Run `SUPABASE-V4-PROFILE-SQL.sql` again after deploying.
+Run `SUPABASE-V5-SQL.sql` again after deploying.
+
+## v5.0 Clean Foundation Overhaul
+This is the first v5 foundation update.
+
+### Changed
+- Default character is intentionally simple:
+  - Basic Short Hair
+  - Plain Tee
+  - Basic Pants
+  - Simple Sneakers
+  - No Accessory
+  - No Trail Effect
+- Skin Effect is now treated as Trail Effect.
+- Starter effect is No Trail; premium effects must be unlocked.
+- Shop/Style system now supports bodyType, accessory, trailEffect, and item rarity.
+- Existing Login / Profile / Dev Dashboard / Leaderboard systems remain.
+
+### New starter values
+bodyType = male
+hair = basic-short
+top = plain-tee
+pants = basic-pants
+shoes = simple-sneakers
+accessory = none
+trailEffect = none
+
+### Required SQL
+Run SUPABASE-V5-SQL.sql in Supabase SQL Editor.
