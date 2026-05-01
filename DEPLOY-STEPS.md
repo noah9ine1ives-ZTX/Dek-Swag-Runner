@@ -179,3 +179,16 @@ Run SUPABASE-V5-SQL.sql in Supabase SQL Editor.
   - Long item names are clipped safely.
   - Character outfit is no longer blocked by text.
 - No new Supabase SQL is required if `SUPABASE-V5-SQL.sql` was already run.
+
+## v5.4 Foot Trail System
+- Trail effects now render closer to the feet instead of behaving like body aura.
+- Added foot anchor based trail generation for running and landing.
+- Added safer low-motion particle shapes for Ember, Neon, Lightning, Smoke, and Holo effects.
+- Added preview trail at the feet in Style Preview.
+- Reduced glow intensity to avoid eye strain.
+- No new Supabase SQL is required.
+
+## v5.4.1 No Body Aura
+- Removed body glow / aura from the character render completely.
+- Trail effects now stay at the feet only in gameplay and Style Preview.
+- No new Supabase SQL is required.
