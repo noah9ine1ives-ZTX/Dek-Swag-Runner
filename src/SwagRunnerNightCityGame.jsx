@@ -714,8 +714,11 @@ function requireDevSafetyCode(){
   if(!requireDevSafetyCode())return;
   setDevBusy(true);
   try{
-   const {count,error}=await supabase.from("leaderboard").delete({count:"exact"}).neq("user_id","00000000-0000-0000-0000-000000000000");
+   const {count,error}=await supabase.from("leaderboard").delete({count:"exact"}).gte("score",0);
    if(error)throw error;
+   setLeaderboard([]);
+   setFriendsLeaderboard([]);
+   saveBoard([]);
    await devAudit("clear_leaderboard",null,{reason:devReason,deleted_count:count??null,timestamp:new Date().toISOString()});
    await loadGlobalLeaderboard();await loadFriendsLeaderboard();await devRefreshLogs();
    setToast("Global leaderboard cleared");
