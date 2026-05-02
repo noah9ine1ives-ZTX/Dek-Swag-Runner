@@ -548,6 +548,7 @@ export default function SwagRunnerNightCityGame(){
   if(!requireDevReason("set role"))return;
   if(!["player","dev"].includes(devTargetRole))return setToast("Invalid role,account_status,suspended_until");
   if(!confirm(`Set ${devTarget.username} role to ${devTargetRole}?`))return;
+  if(!requireDevSafety(`set-role-${devTargetRole}`,devTarget.username))return;
   setDevBusy(true);
   try{
    await supabase.from("profiles").update({role:devTargetRole,updated_at:new Date().toISOString()}).eq("id",devTarget.id);
@@ -561,6 +562,7 @@ export default function SwagRunnerNightCityGame(){
   if(!supabase||!user||!isDev||!devTarget)return setToast("Dev only");
   if(!requireDevReason("remove leaderboard score"))return;
   if(!confirm(`Remove ${devTarget.username} from leaderboard?`))return;
+  if(!requireDevSafety("remove-leaderboard",devTarget.username))return;
   setDevBusy(true);
   try{
    await supabase.from("leaderboard").delete().eq("user_id",devTarget.id);
@@ -575,6 +577,7 @@ export default function SwagRunnerNightCityGame(){
   if(!supabase||!user||!isDev||!devTarget)return setToast("Dev only");
   if(!requireDevReason("reset avatar/bio"))return;
   if(!confirm(`Reset avatar and bio for ${devTarget.username}?`))return;
+  if(!requireDevSafety("reset-profile-public",devTarget.username))return;
   setDevBusy(true);
   try{
    await supabase.from("profiles").update({bio:"",avatar_url:null,updated_at:new Date().toISOString()}).eq("id",devTarget.id);
@@ -589,6 +592,17 @@ export default function SwagRunnerNightCityGame(){
  function requireDevReason(action="action"){
   if(!devReason.trim()){
    setToast(`DEV: ต้องกรอกเหตุผลก่อนทำ ${action}`);
+   return false;
+  }
+  return true;
+ }
+ function requireDevSafety(actionLabel,targetName=""){
+  const action=String(actionLabel||"critical action").trim();
+  const target=String(targetName||devTarget?.username||"target").trim();
+  const phrase=`CONFIRM ${action.toUpperCase()} ${target.toUpperCase()}`;
+  const input=prompt(`DEV SAFETY CHECK\nType this exactly to continue:\n${phrase}`,"")||"";
+  if(input.trim()!==phrase){
+   setToast("DEV safety check failed — action cancelled");
    return false;
   }
   return true;
@@ -610,6 +624,7 @@ export default function SwagRunnerNightCityGame(){
    until=new Date(Date.now()+days*24*60*60*1000).toISOString();
   }
   if(!confirm(`Set ${devTarget.username} status to ${status}?`))return;
+  if(!requireDevSafety(`set-status-${status}`,devTarget.username))return;
   setDevBusy(true);
   try{
    await supabase.from("profiles").update({account_status:status,suspended_until:until,updated_at:new Date().toISOString()}).eq("id",devTarget.id);
@@ -624,6 +639,7 @@ export default function SwagRunnerNightCityGame(){
   if(!supabase||!user||!isDev||!devTarget)return setToast("Dev only");
   if(!requireDevReason("reset score"))return;
   if(!confirm(`Reset score for ${devTarget.username}?`))return;
+  if(!requireDevSafety("reset-score",devTarget.username))return;
   setDevBusy(true);
   try{
    await Promise.all([
@@ -641,6 +657,7 @@ export default function SwagRunnerNightCityGame(){
   if(!supabase||!user||!isDev||!devTarget)return setToast("Dev only");
   if(!requireDevReason("reset wardrobe"))return;
   if(!confirm(`Reset wardrobe for ${devTarget.username}?`))return;
+  if(!requireDevSafety("reset-wardrobe",devTarget.username))return;
   setDevBusy(true);
   try{
    await Promise.all([
