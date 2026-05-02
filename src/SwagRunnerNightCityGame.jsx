@@ -714,8 +714,11 @@ function requireDevSafetyCode(){
   if(!requireDevSafetyCode())return;
   setDevBusy(true);
   try{
-   const {count,error}=await supabase.from("leaderboard").delete({count:"exact"}).not("user_id","is",null);
+   const {count,error}=await supabase.from("leaderboard").delete({count:"exact"}).gte("score",0);
    if(error)throw error;
+   const {count:remain,error:remainError}=await supabase.from("leaderboard").select("user_id",{count:"exact",head:true});
+   if(remainError)throw remainError;
+   if((remain||0)>0)throw new Error("Clear failed: leaderboard still has rows");
    setLeaderboard([]);
    setFriendsLeaderboard([]);
    saveBoard([]);
@@ -723,7 +726,7 @@ function requireDevSafetyCode(){
    await devAudit("clear_leaderboard",null,{reason:devReason,deleted_count:count??null,timestamp:new Date().toISOString()});
    await loadGlobalLeaderboard();await loadFriendsLeaderboard();await devRefreshLogs();
    setToast("Global leaderboard cleared");
-  }catch(e){console.error(e);setToast(`Failed: ${e.message}`)}
+  }catch(e){console.error(e);setToast(e?.message==="Clear failed: leaderboard still has rows"?"Clear failed: leaderboard still has rows":`Failed: ${e.message}`)}
   finally{setDevBusy(false)}
  }
 
