@@ -708,17 +708,18 @@ function requireDevSafetyCode(){
   finally{setDevBusy(false)}
  }
  async function devClearGlobalLeaderboard(){
-  if(!supabase||!user||!isDev)return setToast("Permission denied / RLS blocked");
+  if(!supabase||!user||userRole!=="dev")return setToast("Permission denied / RLS blocked");
   if(!requireDevReason("clear global leaderboard"))return;
   if(!confirm("Clear Global Leaderboard? This deletes all leaderboard rows."))return;
   if(!requireDevSafetyCode())return;
   setDevBusy(true);
   try{
-   const {count,error}=await supabase.from("leaderboard").delete({count:"exact"}).gte("score",0);
+   const {count,error}=await supabase.from("leaderboard").delete({count:"exact"}).not("user_id","is",null);
    if(error)throw error;
    setLeaderboard([]);
    setFriendsLeaderboard([]);
    saveBoard([]);
+   localStorage.removeItem(LS.board);
    await devAudit("clear_leaderboard",null,{reason:devReason,deleted_count:count??null,timestamp:new Date().toISOString()});
    await loadGlobalLeaderboard();await loadFriendsLeaderboard();await devRefreshLogs();
    setToast("Global leaderboard cleared");
