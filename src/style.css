@@ -103,3 +103,6 @@
 .auth-mode-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0}
 .auth-mode-toggle button{border:1px solid #334155;background:rgba(15,23,42,.86);color:#cbd5e1;border-radius:12px;padding:10px;font-weight:900}
 .auth-mode-toggle button.active{background:#facc15;color:#020617;border-color:#fde047}
+
+.menu-screen{display:grid;place-items:center;min-height:100dvh;width:100%;padding:16px;box-sizing:border-box}
+.menu-card{width:min(720px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto}
