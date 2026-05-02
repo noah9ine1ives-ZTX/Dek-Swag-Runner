@@ -95,3 +95,11 @@
 .body-type-switch button.on{border-color:#facc15;background:rgba(250,204,21,.16);color:#fde047;box-shadow:0 0 20px rgba(250,204,21,.10)}
 .body-type-switch button:disabled{opacity:.55}
 @media(max-width:540px){.avatar-preview{min-height:326px}.style-preview-info small{white-space:normal}}
+
+.auth-screen{height:100dvh;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:16px;background:radial-gradient(circle at 15% 5%,rgba(250,204,21,.18),transparent 30%),radial-gradient(circle at 88% 0%,rgba(59,130,246,.2),transparent 28%),linear-gradient(180deg,#020617,#111827 48%,#312e81)}
+.auth-screen-card{width:min(420px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:20px;display:grid;gap:10px}
+.auth-screen-card h1{margin:2px 0;font-size:clamp(26px,4vw,34px)}
+.auth-screen-logo{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#facc15,#f97316);color:#020617;display:grid;place-items:center;font-weight:1000}
+.auth-mode-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0}
+.auth-mode-toggle button{border:1px solid #334155;background:rgba(15,23,42,.86);color:#cbd5e1;border-radius:12px;padding:10px;font-weight:900}
+.auth-mode-toggle button.active{background:#facc15;color:#020617;border-color:#fde047}
