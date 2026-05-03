@@ -984,23 +984,15 @@ g.trails.forEach(t=>{t.life--;t.x+=(t.vx||(-g.speed*.75*boost));t.y+=(t.vy||0);t
  if(screen==="menu")return <div className="app menu-screen"><motion.div className="card hero menu-card"initial={{opacity:0,y:18}}animate={{opacity:1,y:0}}><div className="menu-layout"><div className="menu-left"><div className="pill">MAIN MENU</div><h1 className="title">SWAG<br/>NIGHT<br/><span>RUNNER</span></h1><div className="menu-buttons"><Button onClick={()=>routeMainMenu("play")}>Play</Button><Button onClick={()=>routeMainMenu("shop")}>Shop</Button><Button onClick={()=>routeMainMenu("leaderboard")}>Leaderboard</Button><Button onClick={()=>routeMainMenu("friends")}>Friends</Button><Button onClick={()=>routeMainMenu("profile")}>Profile</Button><Button onClick={()=>routeMainMenu("settings")}>Settings</Button>{isDev&&<Button onClick={()=>routeMainMenu("dev")}>Dev</Button>}</div></div><div className="menu-right"><div className="menu-info-bar"><div className="notice">🪙 Wallet <b>{walletCoins}</b></div><div className="notice">🏆 Best <b>{bestScore}</b></div><div className="notice">👥 Code <b>{friendCode||"-"}</b></div></div><div className="menu-preview-stage">{loadout?renderMiniPreview(loadout,skin,"Runner Preview"):<div className="menu-preview-fallback">Loading Runner...</div>}</div><div className="menu-nameplate"><b>{playerName}</b><span>Runner Profile</span></div></div></div></motion.div></div>;
  if(screen!=="play")return <div className={`app app-screen ${screen}-screen`}><div className="shell app-screen-shell"><div className="app-screen-body"><div className="panel app-scroll-panel">{panel()}</div></div></div></div>;
  return <div className="app play-screen">
-  <div className="shell play-shell">
-   <div className="play-topbar">
-    <div>
-     {status==="gameover"?<button className="btn ghost"onClick={goLanding}>← กลับหน้าแรก</button>:<div className="muted">กำลังวิ่งอยู่</div>}
-     <h1 className="play-title">Swag Night Runner</h1>
-     <div className="muted">Player: <b>{playerName}</b> • {toast}</div>
-    </div>
-    <div className="play-actions">
-     <Button className="game-menu-button" variant="outline" onClick={()=>setPlayMenuOpen(true)}>☰ Menu</Button>
-    </div>
-   </div>
-   <div className="stats play-stats">{[["Score",score],["Coins",`🪙 ${coins}`],["Lives",`❤️ ${lives}`]].map(([a,b])=><div className="stat" key={a}><small>{a}</small><b>{b}</b></div>)}</div>
+  <div className="play-shell">
    <div className="canvaswrap play-canvaswrap">
     <canvas ref={canvasRef} width={W} height={H} onTouchStart={e=>{e.preventDefault();const t=e.changedTouches[0],r=e.currentTarget.getBoundingClientRect();if(t.clientX-r.left<r.width*.42)pressDuck(true);else pressJump()}} onTouchMove={e=>e.preventDefault()} onTouchEnd={e=>{e.preventDefault();pressDuck(false)}}/>
     <div className="mobilehint"><span>แตะซ้ายค้าง = หมอบ</span><span>แตะขวา = กระโดด</span></div>
    </div>
-   <div className="grid4 play-controls" style={{marginTop:12}}>
+   <div className="game-hud">{[["Score",score],["Coins",`🪙 ${coins}`],["Lives",`❤️ ${lives}`]].map(([a,b])=><div className="game-hud-pill" key={a}><small>{a}</small><b>{b}</b></div>)}
+    <Button className="game-menu-button" variant="outline" onClick={()=>setPlayMenuOpen(true)}>☰ Menu</Button>
+   </div>
+   <div className="grid4 play-controls">
     <button className="btn dark" onTouchStart={e=>{e.preventDefault();pressDuck(true)}} onTouchEnd={e=>{e.preventDefault();pressDuck(false)}} onMouseDown={()=>pressDuck(true)} onMouseUp={()=>pressDuck(false)}>↓ หมอบ</button>
     <button className="btn" onTouchStart={e=>{e.preventDefault();pressJump()}} onMouseDown={pressJump}>↑ กระโดด</button>
     <button className="btn dark" disabled={locked} onClick={cycleQuality}>⚙️ Quality: {quality.toUpperCase()}</button>
@@ -1011,7 +1003,6 @@ g.trails.forEach(t=>{t.life--;t.x+=(t.vx||(-g.speed*.75*boost));t.y+=(t.vy||0);t
      {status==="gameover"&&<p className="muted">Score <b>{finalScore}</b> • Coins +{coins}</p>}
      {playMenuOpen&&status!=="gameover"&&<Button onClick={()=>setPlayMenuOpen(false)}>Resume</Button>}
      <Button onClick={()=>{setPlayMenuOpen(false);reset()}}>Restart</Button>
-     <Button variant="outline" onClick={()=>{setPlayMenuOpen(false);setScreen("settings")}}>Settings</Button>
      <Button variant="outline" onClick={()=>{setPlayMenuOpen(false);goLanding()}}>Main Menu</Button>
     </div>
    </div>}
