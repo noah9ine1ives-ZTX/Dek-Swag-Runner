@@ -194,10 +194,11 @@ export default function SwagRunnerNightCityGame(){
  const[devToast,setDevToast]=useState(null);
  const ch=daily(),locked=status==="playing",finalScore=savedScore??score;
 
- function showDevToast(type,message){
+function showDevToast(type,message){
   const timeout=type==="success"?3000:(type==="loading"?0:5000);
-  setDevToast({type,message,ts:Date.now()});
-  if(timeout>0)setTimeout(()=>setDevToast(t=>t?.message===message?null:t),timeout);
+  const id=Date.now()+Math.random();
+  setDevToast({id,type,message,ts:Date.now()});
+  if(timeout>0)setTimeout(()=>setDevToast(t=>t?.id===id?null:t),timeout);
  }
  const safeAudit=async(action,targetId,details={})=>{
   try{await devAudit(action,targetId,{...details,timestamp:new Date().toISOString()});return null}catch(e){return e}
@@ -476,20 +477,26 @@ export default function SwagRunnerNightCityGame(){
   setActive(target);
   setScreen(target);
  };
- async function devSyncWallet(nextCoins){
+async function devSyncWallet(nextCoins){
   if(!supabase||!user||!isDev)return;
+  const oldCoins=walletCoins;
   const coins=Math.max(0,Math.floor(num(nextCoins,0)));
+  showDevToast("loading","Processing: updating coins...");
   await supabase.from("profiles").update({coins,updated_at:new Date().toISOString(),last_seen:new Date().toISOString()}).eq("id",user.id);
   setWalletCoins(coins);
   set(LS.wallet,String(coins));
-  setToast(`DEV: wallet set to ${coins} coins`);
+  const auditErr=await safeAudit("self_add_coins",user.id,{old:oldCoins,new:coins,amount:coins-oldCoins});
+  showDevToast("success","Success: coins added");
+  if(auditErr)showDevToast("warning",`Action completed, but audit log failed: ${auditErr.message}`);
  }
  async function devAddCoins(){
   if(!isDev)return showDevToast("error","Failed: permission denied / RLS blocked");
-  await devSyncWallet(walletCoins+num(devCoins,0));
+  try{await devSyncWallet(walletCoins+num(devCoins,0));}catch(e){showDevToast("error",`Failed: Supabase error: ${e.message}`)}
  }
  async function devUnlockAll(){
   if(!supabase||!user||!isDev)return showDevToast("error","Failed: permission denied / RLS blocked");
+  showDevToast("loading","Processing: updating item...");
+  try{
   const allParts={
    hairs:PARTS.hairs.map(x=>x.id),
    tops:PARTS.tops.map(x=>x.id),
@@ -500,22 +507,29 @@ export default function SwagRunnerNightCityGame(){
   setUnlockedParts(allParts);setUnlockedEffects(allEffects);
   set(LS.parts,JSON.stringify(allParts));set(LS.unlocked,JSON.stringify(allEffects));
   await saveCloudLoadout(loadout,skin,allParts,allEffects);
-  setToast("DEV: unlocked all wardrobe and effects");
+  const auditErr=await safeAudit("self_unlock_all",user.id,{parts_count:Object.values(allParts).reduce((n,arr)=>n+(arr?.length||0),0),effects_count:allEffects.length});
+  showDevToast("success","Success: item granted");
+  if(auditErr)showDevToast("warning",`Action completed, but audit log failed: ${auditErr.message}`);
+  }catch(e){showDevToast("error",`Failed: Supabase error: ${e.message}`)}
  }
  async function devResetMyTestData(){
   if(!supabase||!user||!isDev)return showDevToast("error","Failed: permission denied / RLS blocked");
+  showDevToast("loading","Processing: resetting score...");
   const cleanLoadout=DEFAULT_LOADOUT;
   const cleanParts=DEFAULT_PARTS;
   setWalletCoins(0);setBestScore(0);setLoadout(cleanLoadout);setPreviewLoadout(cleanLoadout);setSkin("none");setPreviewSkin("none");setUnlockedParts(cleanParts);setUnlockedEffects(["none"]);
   set(LS.wallet,"0");set(LS.best,"0");set(LS.loadout,JSON.stringify(cleanLoadout));set(LS.parts,JSON.stringify(cleanParts));set(LS.skin,"none");set(LS.unlocked,JSON.stringify(["none"]));
-  await Promise.all([
+  try{await Promise.all([
    supabase.from("profiles").update({coins:0,best_score:0,best_combo:1,best_style:0,updated_at:new Date().toISOString()}).eq("id",user.id),
    supabase.from("leaderboard").delete().eq("user_id",user.id),
    supabase.from("player_loadouts").upsert({user_id:user.id,...cleanLoadout,trail_effect:"none",updated_at:new Date().toISOString()},{onConflict:"user_id"}),
    supabase.from("player_inventory").upsert({user_id:user.id,...cleanParts,effects:["none"],updated_at:new Date().toISOString()},{onConflict:"user_id"})
   ]);
   await loadGlobalLeaderboard();await loadFriendsLeaderboard();
-  setToast("DEV: reset only your own test data");
+  const auditErr=await safeAudit("self_reset_test_data",user.id,{new_coins:0,new_best_score:0,new_best_combo:1,new_best_style:0});
+  showDevToast("success","Success: score reset");
+  if(auditErr)showDevToast("warning",`Action completed, but audit log failed: ${auditErr.message}`);
+  }catch(e){showDevToast("error",`Failed: Supabase error: ${e.message}`)}
  }
 
  
@@ -535,7 +549,7 @@ export default function SwagRunnerNightCityGame(){
   if(!supabase||!user||!isDev)return showDevToast("error","Failed: permission denied / RLS blocked");
   const q=devLookup.trim();
   if(!q)return showDevToast("warning","Failed: target not found");
-  setDevBusy(true);showDevToast("loading","Processing: clearing leaderboard...");
+  setDevBusy(true);showDevToast("loading","Processing: searching player...");
   try{
    const normalized=q.toUpperCase();
    let {data:p,error}=await supabase.from("profiles").select("id,username,friend_code,role,account_status,suspended_until,coins,best_score,best_combo,best_style,bio,avatar_url,last_seen,created_at,updated_at").eq("friend_code",normalized).maybeSingle();
@@ -545,7 +559,7 @@ export default function SwagRunnerNightCityGame(){
     if(res.error)throw res.error;
     p=res.data;
    }
-   if(!p){setDevTarget(null);return setToast("ไม่พบผู้เล่นนี้")}
+   if(!p){setDevTarget(null);return showDevToast("error","Failed: target not found")}
    setDevTarget(p);
    setDevTargetCoins(String(p.coins||0));
    setDevTargetRole(p.role||"player");
@@ -635,7 +649,7 @@ export default function SwagRunnerNightCityGame(){
  
 function requireDevReason(action="action"){
  if(!devReason.trim()){
-  setToast("Reason required");
+  showDevToast("error","Failed: missing reason");
   return false;
  }
  return true;
@@ -651,7 +665,7 @@ function requireDevSafetyCode(){
  const code=prompt("DEV SAFETY CHECK — Type admin code to continue","");
  if(code===null)return false;
  if(code.trim()!==DEV_ADMIN_CODE){
-  setToast("Invalid admin code");
+  showDevToast("error","Failed: invalid admin code");
   return false;
  }
  return true;
@@ -662,7 +676,7 @@ function requireDevSafetyCode(){
    const {data,error}=await supabase.from("dev_audit_log").select("id,action,details,created_at,dev_id,target_id").order("created_at",{ascending:false}).limit(20);
    if(error)throw error;
    setDevLogs(data||[]);
-  }catch(e){console.error(e);setToast(`โหลด audit log ไม่สำเร็จ: ${e.message}`)}
+  }catch(e){console.error(e);showDevToast("error",`Failed: Supabase error: ${e.message}`)}
  }
  async function devSetAccountStatus(status){
  if(!supabase||!user||!isDev||!devTarget)return showDevToast("error","Failed: permission denied / RLS blocked");
