@@ -126,3 +126,20 @@
 .dev-toast.error{background:#dc2626}
 .dev-toast.warning{background:#d97706}
 .dev-toast.loading{background:#2563eb}
+
+/* v5.9.3 QA polish */
+@media(max-width:780px){
+  .menu-card{width:min(1180px,calc(100vw - 16px));max-height:calc(100dvh - 16px)}
+  .menu-screen{padding:8px}
+  .menu-buttons{grid-template-columns:1fr}
+  .menu-nameplate b{font-size:18px;word-break:break-word}
+  .dev-panel{padding:12px;border-radius:18px}
+  .dev-section,.dev-target{padding:12px;border-radius:16px}
+  .dev-panel .grid4,.dev-panel .grid3,.dev-panel .formrow{grid-template-columns:1fr}
+  .dev-panel .btn,.dev-panel .input,.dev-panel .textarea,.dev-panel select{width:100%}
+  .friend-card{grid-template-columns:auto 1fr;align-items:start}
+  .friend-card .row{grid-column:1 / -1;flex-wrap:wrap}
+}
+
+.dev-empty{margin-top:10px}
+.notice{overflow-wrap:anywhere}
