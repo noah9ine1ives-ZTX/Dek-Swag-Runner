@@ -820,7 +820,7 @@ function previewBodyType(type){if(locked)return lockToast();const nl=normLoadout
   return()=>clearTimeout(t);
  },[signupUsername,user]);
 
- useEffect(()=>{if(screen!=="play")return;const prevBody=document.body.style.overflow,prevHtml=document.documentElement.style.overflow;document.body.style.overflow="hidden";document.documentElement.style.overflow="hidden";return()=>{document.body.style.overflow=prevBody;document.documentElement.style.overflow=prevHtml}},[screen]);
+useEffect(()=>{if(screen!=="play")return;const prevBodyOverflow=document.body.style.overflow,prevHtmlOverflow=document.documentElement.style.overflow,prevBodyTouch=document.body.style.touchAction,prevHtmlOverscroll=document.documentElement.style.overscrollBehavior;document.body.style.overflow="hidden";document.documentElement.style.overflow="hidden";document.body.style.touchAction="none";document.documentElement.style.overscrollBehavior="none";return()=>{document.body.style.overflow=prevBodyOverflow;document.documentElement.style.overflow=prevHtmlOverflow;document.body.style.touchAction=prevBodyTouch;document.documentElement.style.overscrollBehavior=prevHtmlOverscroll}},[screen]);
  useEffect(()=>{const down=e=>{const t=e.target?.tagName?.toLowerCase();if(t==="input"||t==="textarea"||e.target?.isContentEditable)return;keys.current[e.code]=true;if(["Space","ArrowUp","ArrowDown"].includes(e.code))e.preventDefault();if(screen==="menu"&&e.code==="Enter")reset();if(screen==="play"&&status!=="playing"&&e.code==="Space")reset()};const up=e=>keys.current[e.code]=false;addEventListener("keydown",down);addEventListener("keyup",up);return()=>{removeEventListener("keydown",down);removeEventListener("keyup",up)}},[screen,status]);
 
  // Canvas game loop

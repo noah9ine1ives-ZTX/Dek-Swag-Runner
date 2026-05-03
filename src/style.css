@@ -144,14 +144,15 @@
 .dev-empty{margin-top:10px}
 .notice{overflow-wrap:anywhere}
 
-.play-screen{min-height:100dvh;max-height:100dvh;overflow:hidden;padding:8px}
-.play-shell{height:calc(100dvh - 16px);display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:8px;overflow:hidden}
+.play-screen{min-height:100dvh;max-height:100dvh;overflow:hidden;padding:8px;overflow-x:hidden}
+.play-shell{height:calc(100dvh - 16px);display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:8px;overflow:hidden;position:relative}
 .play-topbar{display:flex;justify-content:space-between;gap:10px;align-items:flex-end}
 .play-title{margin:2px 0 0;font-size:clamp(20px,4.4vw,34px);line-height:1}
 .play-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .play-canvaswrap{min-height:0;height:100%;display:grid;align-content:center}
 .play-canvaswrap canvas{width:100%;height:auto;max-height:52dvh;object-fit:contain}
 .play-controls{margin-top:0!important}
+.play-shell .result{position:absolute;inset:12px 0 auto 0;z-index:7;margin:0;padding:0 4px;max-height:calc(100dvh - 24px);overflow:auto}
 
 @media(max-width:780px){
   .play-screen{padding:6px}
@@ -163,4 +164,5 @@
   .play-controls{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
   .play-controls .btn{padding:10px 8px;font-size:13px}
   .play-canvaswrap canvas{max-height:48dvh}
+  .play-shell .result{inset:8px 0 auto 0;max-height:calc(100dvh - 16px)}
 }
